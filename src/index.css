@@ -1,0 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Outfit:wght@100..900&family=Playfair:ital,opsz,wght@0,5..1200,300..900;1,5..1200,300..900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #646cff;
+  --color-primary-hover: #535bf2;
+  --color-primary-active: #4249f5;
+  --color-secondary: #ff0081;
+  --color-secondary-hover: #e6007e;
+  --color-secondary-active: #cc006b;
+  --color-accent: #61dafb;
+}
+
+* {
+  font-family: 'Nunito Sans', 'Outfit', 'Playfair', sans-serif;
+}
+
+.font-playfair {
+  font-family: 'Playfair' !important;
+}
+
+.font-outfit {
+  font-family: 'Outfit' !important;
+}

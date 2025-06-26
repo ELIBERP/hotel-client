@@ -1,0 +1,30 @@
+// This configuration file sets up ESLint for a React project with specific rules for indentation and JSX formatting.
+{
+    "env": {
+        "browser": true,
+        "es2021": true,
+        "node": true
+    },
+    "extends": [
+        "eslint:recommended",
+        "plugin:react/recommended",
+        "prettier"
+    ],
+    "parserOptions": {
+        "ecmaVersion": 12,
+        "sourceType": "module",
+        "ecmaFeatures": {
+        "jsx": true
+        }
+    },
+    "rules": {
+        "indent": ["error", 4, { "SwitchCase": 1 }],
+        "react/jsx-indent": ["error", 4],
+        "react/jsx-indent-props": ["error", 4]
+    },
+    "settings": {
+        "react": {
+        "version": "detect"
+        }
+    }
+}
