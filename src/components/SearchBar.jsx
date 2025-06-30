@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ApiService from '../services/api';
 
 const SearchBar = ({ 
   placeholder = "Where are you going?", 
@@ -7,20 +8,34 @@ const SearchBar = ({
   size = "default" // "default" or "large"
 }) => {
   const [searchValue, setSearchValue] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (e) => {
-    // on input change, update the search value
-    // for searching functionality to search 
-    // after the user has stopped typing for 300ms 
-    // then run the search function
     const newValue = e.target.value;
     setSearchValue(newValue);
     console.log("Search input:", newValue); // debugging purpose
   };
 
-  const handleSearch = () => {
-    if (onSearch) {
-      onSearch(searchValue);
+  const handleSearch = async () => {
+    if (!searchValue.trim()) return;
+    
+    setIsLoading(true);
+    try {
+      // Make GET request to /hotels endpoint with search query
+      const results = await ApiService.getHotels({ 
+        destination_id: searchValue.trim() 
+      });
+      console.log('Hotels search results:', results);
+      
+      // Call the parent component's onSearch function
+      if (onSearch) {
+        onSearch(searchValue, results);
+      }
+    } catch (error) {
+      console.error('Hotels search failed:', error);
+      // Handle error (show toast, etc.)
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -74,10 +89,14 @@ const SearchBar = ({
         <div className="flex items-center justify-center rounded-r-xl border-l-0 border border-[#d0dde7] bg-slate-50 pr-[7px]">
           <button
             className={`flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl 
-            bg-[#47a6ea] text-[#0e151b] font-bold leading-normal tracking-[0.015em] ${currentSize.button}`}
+            bg-[#47a6ea] text-[#0e151b] font-bold leading-normal tracking-[0.015em] ${currentSize.button} 
+            ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
             onClick={handleSearch}
+            disabled={isLoading}
           >
-            <span className="truncate">Search</span>
+            <span className="truncate">
+              {isLoading ? 'Searching...' : 'Search'}
+            </span>
           </button>
         </div>
       </div>

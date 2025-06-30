@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "./App.css";
 import Header from "./components/Header";
@@ -6,8 +6,14 @@ import Footer from "./components/Footer";
 import Landing from "./pages/LandingContent";
 import About from "./pages/About";
 import Stays from "./pages/Stays";
+import { logEnvironmentInfo } from "./config/env";
 
 const App = () => {
+  useEffect(() => {
+    // Log environment info in development
+    logEnvironmentInfo();
+  }, []);
+
   return (
     <Router>
       <div className="relative flex size-full min-h-screen flex-col bg-slate-50 group/design-root overflow-x-hidden" style={{fontFamily: '"Plus Jakarta Sans", "Noto Sans", sans-serif'}}>

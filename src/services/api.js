@@ -1,0 +1,97 @@
+import { buildApiUrl, getApiEndpoint } from '../config/env.js';
+import config from '../config/env.js';
+
+class ApiService {
+  constructor() {
+    this.baseURL = buildApiUrl('');
+    this.timeout = config.apiTimeout;
+  }
+
+  // Generic request method with timeout and better error handling
+  async request(endpoint, options = {}) {
+    const url = buildApiUrl(endpoint);
+    
+    const defaultOptions = {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      signal: AbortSignal.timeout(this.timeout), // Built-in timeout
+    };
+
+    try {
+      if (config.debugMode) {
+        console.log(`API Request: ${options.method || 'GET'} ${url}`);
+      }
+
+      const response = await fetch(url, { ...defaultOptions, ...options });
+      
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorData || 'Request failed'}`);
+      }
+      
+      const data = await response.json();
+      
+      if (config.debugMode) {
+        console.log('API Response:', data);
+      }
+      
+      return data;
+    } catch (error) {
+      if (error.name === 'TimeoutError') {
+        console.error('API request timed out:', url);
+        throw new Error('Request timed out. Please try again.');
+      }
+      
+      console.error('API request failed:', error);
+      throw error;
+    }
+  }
+
+  // GET request
+  async get(endpoint) {
+    return this.request(endpoint, { method: 'GET' });
+  }
+
+  // POST request
+  async post(endpoint, data) {
+    return this.request(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // PUT request
+  async put(endpoint, data) {
+    return this.request(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // DELETE request
+  async delete(endpoint) {
+    return this.request(endpoint, { method: 'DELETE' });
+  }
+
+  // Specific API methods
+  async searchHotels(query) {
+    return this.get(`${getApiEndpoint('search')}?q=${encodeURIComponent(query)}`);
+  }
+
+  async getHotels(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`${getApiEndpoint('hotels')}?${queryString}`);
+  }
+
+  async getHotelById(id) {
+    return this.get(`${getApiEndpoint('hotels')}/${id}`);
+  }
+
+  async createBooking(bookingData) {
+    return this.post(getApiEndpoint('bookings'), bookingData);
+  }
+}
+
+export default new ApiService();
