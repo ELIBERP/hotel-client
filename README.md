@@ -48,7 +48,7 @@ src/
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/ELIBERP/hotel-client.git
 cd hotel-client
 
 # Install dependencies
