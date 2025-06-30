@@ -1,7 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Outfit:wght@100..900&family=Playfair:ital,opsz,wght@0,5..1200,300..900;1,5..1200,300..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@400;500;700;800');
 @import "tailwindcss";
 
-@theme {
+@theme {  
+  --breakpoint-3xl: 1920px;
+
   --color-primary: #646cff;
   --color-primary-hover: #535bf2;
   --color-primary-active: #4249f5;
@@ -9,10 +12,27 @@
   --color-secondary-hover: #e6007e;
   --color-secondary-active: #cc006b;
   --color-accent: #61dafb;
+
+  --ease-fluid: cubic-bezier(0.3, 0, 0, 1);
+  --ease-snappy: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Reset default browser styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 * {
-  font-family: 'Nunito Sans', 'Outfit', 'Playfair', sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Nunito Sans', 'Outfit', 'Playfair', sans-serif;
 }
 
 .font-playfair {
