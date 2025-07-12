@@ -9,11 +9,19 @@ const SearchBar = ({
 }) => {
   const [searchValue, setSearchValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const handleInputChange = (e) => {
     const newValue = e.target.value;
     setSearchValue(newValue);
     console.log("Search input:", newValue); // debugging purpose
+
+    // Show dropdown when typing
+    if (newValue.length > 0) {
+      setShowDropdown(true);
+    } else {
+      setShowDropdown(false);
+    }
   };
 
   const handleSearch = async () => {
@@ -45,6 +53,25 @@ const SearchBar = ({
     }
   };
 
+  // temp dropdown items (replace this with real data later)
+  const sampleDestinations = [
+    "WD0M",
+    "Singapore",
+    "Bangkok",
+    "Tokyo",
+    "Paris",
+    "London"
+  ];
+
+  const filteredDestinations = sampleDestinations.filter(dest =>
+    dest.toLowerCase().includes(searchValue.toLowerCase())
+  );
+
+  const handleDropdownClick = (destination) => {
+    setSearchValue(destination);
+    setShowDropdown(false);
+  };
+
   // Size variants
   const sizeClasses = {
     default: {
@@ -61,7 +88,8 @@ const SearchBar = ({
 
   const currentSize = sizeClasses[size];
 
-  return (
+return (
+  <div className="relative w-full max-w-[480px]">
     <label className={`flex flex-col min-w-40 ${currentSize.container} w-full max-w-[480px] ${className}`}>
       <div className="flex w-full flex-1 items-stretch rounded-xl h-full">
         <div
@@ -101,7 +129,24 @@ const SearchBar = ({
         </div>
       </div>
     </label>
-  );
+
+    {/* Simple Dropdown */}
+    {showDropdown && filteredDestinations.length > 0 && (
+      //set box below search bar
+      <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-b-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+        {filteredDestinations.map((destination, index) => ( //list items
+          <div
+            key={index}
+            className="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+            onClick={() => handleDropdownClick(destination)}
+          >
+            {destination}
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+);
 };
 
 export default SearchBar;
