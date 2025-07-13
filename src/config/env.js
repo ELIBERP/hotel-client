@@ -18,7 +18,7 @@ const config = {
     auth: '/auth',
     hotels: '/hotels',
     bookings: '/bookings',
-    search: '/search',
+    search: '/search',  
     user: '/user'
   }
 };

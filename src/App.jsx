@@ -6,6 +6,7 @@ import Footer from "./components/Footer";
 import Landing from "./pages/LandingContent";
 import About from "./pages/About";
 import Stays from "./pages/Stays";
+import HotelDetails from "./pages/HotelDetails";
 import { logEnvironmentInfo } from "./config/env";
 
 const App = () => {
@@ -24,6 +25,7 @@ const App = () => {
               <Route path="/" element={<Landing />} />
               <Route path="/stays" element={<Stays />} />
               <Route path="/about" element={<About />} />
+              <Route path="/hotels/:id" element={<HotelDetails />} />
             </Routes>
           </main>
           <Footer />

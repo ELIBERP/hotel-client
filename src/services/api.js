@@ -1,6 +1,8 @@
 import { buildApiUrl, getApiEndpoint } from '../config/env.js';
 import config from '../config/env.js';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+
 class ApiService {
   constructor() {
     this.baseURL = buildApiUrl('');
@@ -85,6 +87,8 @@ class ApiService {
     return this.get(`${getApiEndpoint('hotels')}?${queryString}`);
   }
 
+  // Make a call to our backend endpoint /hotels/:id to get hotel details
+  // Then using the response, render the corresponding images on the frontend
   async getHotelById(id) {
     return this.get(`${getApiEndpoint('hotels')}/${id}`);
   }
