@@ -93,6 +93,12 @@ class ApiService {
     return this.get(`${getApiEndpoint('hotels')}/${id}`);
   }
 
+  async getHotelRoomsByID(id, query) {
+    const queryString = new URLSearchParams(query).toString();
+    console.log("hotels/${id}/prices?${queryString}");
+    return this.get(`${getApiEndpoint('hotels')}/${id}/prices?${queryString}`);
+  }
+
   async createBooking(bookingData) {
     return this.post(getApiEndpoint('bookings'), bookingData);
   }
