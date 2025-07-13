@@ -8,6 +8,8 @@ import About from "./pages/About";
 import Stays from "./pages/Stays";
 import HotelDetails from "./pages/HotelDetails";
 import { logEnvironmentInfo } from "./config/env";
+import CreateBooking from "./pages/CreateBooking";
+
 
 const App = () => {
   useEffect(() => {
@@ -26,6 +28,7 @@ const App = () => {
               <Route path="/stays" element={<Stays />} />
               <Route path="/about" element={<About />} />
               <Route path="/hotels/:id" element={<HotelDetails />} />
+              <Route path="/booking" element={<CreateBooking />} />
             </Routes>
           </main>
           <Footer />
