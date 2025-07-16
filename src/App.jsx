@@ -7,6 +7,7 @@ import Landing from "./pages/LandingContent";
 import About from "./pages/About";
 import Stays from "./pages/Stays";
 import HotelDetails from "./pages/HotelDetails";
+import HotelSearchResults from './pages/HotelSearchResults';
 import { logEnvironmentInfo } from "./config/env";
 
 const App = () => {
@@ -26,6 +27,7 @@ const App = () => {
               <Route path="/stays" element={<Stays />} />
               <Route path="/about" element={<About />} />
               <Route path="/hotels/:id" element={<HotelDetails />} />
+              <Route path="/searchResults/:destinationId" element={<HotelSearchResults />} />
             </Routes>
           </main>
           <Footer />
