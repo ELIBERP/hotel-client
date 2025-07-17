@@ -7,6 +7,7 @@ const HotelSearchResults = () => {
   const [hotels, setHotels] = useState([]);
   const [loading, setLoading] = useState(true);
   const { destinationId } = useParams(); // this is the UID, e.g., 'vJh2'
+  const [prices, setPrices] = useState([]);
 
   // find destination term using uid
   const destEntry = destinations.find((d) => d.uid === destinationId);
@@ -19,6 +20,10 @@ const HotelSearchResults = () => {
         const res = await fetch(`http://localhost:3000/api/hotels?destination_id=${destinationId}`);
         const data = await res.json();
         setHotels(data);
+        const priceRes = await fetch(`http://localhost:3000/api/hotels/prices?destination_id=${destinationId}&checkin=2025-10-01&checkout=2025-10-07&lang=en_US&currency=SGD&country_code=SG&guests=2&partner_id=1`);
+        const priceData = await priceRes.json();
+        console.log('🚨 priceData:', priceData);
+        setPrices(priceData.hotels || []);
       } catch (err) {
         console.error('Failed to fetch hotels:', err);
         setHotels([]);
@@ -42,12 +47,31 @@ const HotelSearchResults = () => {
         <div className="flex flex-col gap-8">
           {hotels.map((hotel, index) => {
             const { name, address, rating, image_details, hires_image_index } = hotel;
+            const hotelPrice = prices.find(p => p.hotel_id === hotel.id);
+            const priceText = hotelPrice ? `From $${hotelPrice.price} / night` : 'Price unavailable';
 
-            let imageUrl = 'https://via.placeholder.com/400x300?text=No+Image';
-            if (image_details?.prefix && image_details?.suffix && hires_image_index) {
-              const firstIndex = hires_image_index.split(',')[0].trim();
-              imageUrl = `${image_details.prefix}${firstIndex}${image_details.suffix}`;
+            let imageUrl = 'https://dummyimage.com/400x300/cccccc/000000&text=No+Image';
+
+            if (
+              image_details?.prefix &&
+              image_details?.suffix
+            ) {
+              let index = '0';
+
+              if (typeof hires_image_index === 'string' && hires_image_index.trim().length > 0) {
+                const first = hires_image_index.split(',')[0].trim();
+                if (first !== '') {
+                  index = first;
+                } else if (typeof hotel.default_image_index === 'number') {
+                  index = hotel.default_image_index.toString();
+                }
+              } else if (typeof hotel.default_image_index === 'number') {
+                index = hotel.default_image_index.toString();
+              }
+
+              imageUrl = `${image_details.prefix}${index}${image_details.suffix}`;
             }
+
 
             return (
               <Link
@@ -67,7 +91,7 @@ const HotelSearchResults = () => {
                       <StarRating rating={rating || 0} />
                     </div>
                   </div>
-                  <p className="text-blue-600 font-semibold mt-3 text-base">From $/night</p>
+                  <p className="text-blue-600 font-semibold mt-3 text-base">{priceText}</p>
                 </div>
               </Link>
             );
