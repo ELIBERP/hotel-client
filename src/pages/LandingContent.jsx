@@ -1,14 +1,28 @@
 import React from 'react';
 import SearchBar from '../components/SearchBar';
+import { useNavigate } from 'react-router-dom';
+import destinations from '../assets/destinations.json';
 
 const Landing = () => {
-    const handleSearch = (searchQuery) => {
-        console.log('Searching for:', searchQuery);
-        // Here you can add your search logic, like:
-        // - Navigate to search results page
-        // - Call an API to search for hotels
-        // - Filter results, etc.
-    };
+    // const handleSearch = (searchQuery) => {
+    //     console.log('Searching for:', searchQuery);
+    //     // Here you can add your search logic, like:
+    //     // - Navigate to search results page
+    //     // - Call an API to search for hotels
+    //     // - Filter results, etc.
+    // };
+    const navigate = useNavigate();
+
+  const handleSearch = (searchQuery) => {
+    const destination = destinations.find(d =>
+      d.term.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    if (destination) {
+      navigate(`/searchResults/${destination.uid}`);
+    } else {
+      alert("Destination not found");
+    }
+  };
     
     return (
         <div className="px-40 flex flex-1 justify-center py-5 min-h-[500px]">

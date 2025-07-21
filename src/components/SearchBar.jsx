@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import ApiService from '../services/api';
+import destinations from '../assets/destinations.json';
 
 const SearchBar = ({ 
   placeholder = "Where are you going?", 
@@ -24,28 +25,36 @@ const SearchBar = ({
     }
   };
 
-  const handleSearch = async () => {
-    if (!searchValue.trim()) return;
+  // const handleSearch = async () => {
+  //   if (!searchValue.trim()) return;
     
-    setIsLoading(true);
-    try {
-      // Make GET request to /hotels endpoint with search query
-      const results = await ApiService.getHotels({ 
-        destination_id: searchValue.trim() 
-      });
-      console.log('Hotels search results:', results);
+  //   setIsLoading(true);
+  //   try {
+  //     // Make GET request to /hotels endpoint with search query
+  //     const results = await ApiService.getHotels({ 
+  //       destination_id: searchValue.trim() 
+  //     });
+  //     console.log('Hotels search results:', results);
       
-      // Call the parent component's onSearch function
-      if (onSearch) {
-        onSearch(searchValue, results);
-      }
-    } catch (error) {
-      console.error('Hotels search failed:', error);
-      // Handle error (show toast, etc.)
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  //     // Call the parent component's onSearch function
+  //     if (onSearch) {
+  //       onSearch(searchValue, results);
+  //     }
+  //   } catch (error) {
+  //     console.error('Hotels search failed:', error);
+  //     // Handle error (show toast, etc.)
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+  const handleSearch = () => {
+  if (!searchValue.trim()) return;
+
+  if (onSearch) {
+    onSearch(searchValue.trim());
+  }
+};
+
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
@@ -54,16 +63,22 @@ const SearchBar = ({
   };
 
   // temp dropdown items (replace this with real data later)
-  const sampleDestinations = [
-    "WD0M",
-    "Singapore",
-    "Bangkok",
-    "Tokyo",
-    "Paris",
-    "London"
-  ];
+  // const sampleDestinations = [
+  //   "WD0M",
+  //   "Singapore",
+  //   "Bangkok",
+  //   "Tokyo",
+  //   "Paris",
+  //   "London"
+  // ];
+  const sampleDestinations = destinations.map(d => d.term);
 
-  const filteredDestinations = sampleDestinations.filter(dest =>
+  // const filteredDestinations = sampleDestinations.filter(dest =>
+  //   dest.toLowerCase().includes(searchValue.toLowerCase())
+  // );
+  const filteredDestinations = sampleDestinations
+  .filter(dest => typeof dest === "string" && dest) // Only keep non-empty strings
+  .filter(dest =>
     dest.toLowerCase().includes(searchValue.toLowerCase())
   );
 
