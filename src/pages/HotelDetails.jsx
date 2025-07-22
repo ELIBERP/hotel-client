@@ -56,6 +56,44 @@ const HotelDetails = () => {
     
     <div>
       <SearchBarHotelDetails/>
+      <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-6">
+        <h1 className="text-2xl font-bold text-[#0e151b] mb-6">{hotel.name}</h1>
+        <div className="flex flex-col md:flex-row gap-8 mb-6">
+
+          <img
+            src={images[0]}
+            alt="Main Hotel View"
+            className="rounded-xl w-full md:w-1/2 object-cover"
+          />
+
+          <div className="flex flex-col justify-start md:w-1/2">
+            <h2 className="text-xl font-semibold text-[#0e151b] mb-2">About this place</h2>
+            <a href="#" className="text-sm text-[#1a73e8] underline mb-2">📍 {hotel.address} </a>
+            <p className="text-sm text-[#0e151b] leading-relaxed">
+              {hotel.description.length > 500
+                ? hotel.description.slice(0, 500) + '...'
+                : hotel.description}
+            </p>
+            <a href="#" className="mt-2 text-sm text-[#1a73e8] underline">View more details...</a>
+          </div>
+        </div>
+        <div className="flex gap-4 overflow-x-auto py-4">
+          {images.map((url, idx) => (
+            <img 
+              key={idx} 
+              src={url} 
+              alt={`Hotel image ${idx + 1}`} 
+              className="w-48 h-32 object-cover rounded-xl flex-shrink-0" 
+            />
+          ))}
+        </div>
+      </div>
+  
+
+
+
+
+
       <h1>Name: {hotel.name}</h1>
       <p><strong>Address:</strong> {hotel.address}</p>
       <p><strong>Rating:</strong> {hotel.rating ? hotel.rating : 'N/A'}</p>

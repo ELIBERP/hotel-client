@@ -5,7 +5,7 @@ export const SearchBarHotelDetails = () => {
   return (
     <section className="w-full border-b border-gray-200 bg-white">
       <div className="w-full px-6 sm:px-16 py-4 bg-[#f2f2f4] rounded-xl shadow-sm">
-        {/* This reuses the real search bar inside the styled Anima-like container */}
+        
         <SearchBar
           placeholder="Paris, France"
           size="large"  
