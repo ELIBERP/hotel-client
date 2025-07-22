@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ApiService from '../services/api';
+import Map from '../components/Map';
 
 const HotelDetails = () => {
   const { id } = useParams();
@@ -53,6 +54,7 @@ const HotelDetails = () => {
 
   return (
     <div>
+      <Map coordinates={{ lat: hotel.latitude, lng: hotel.longitude }} />
       <h1>Name: {hotel.name}</h1>
       <p><strong>Address:</strong> {hotel.address}</p>
       <p><strong>Rating:</strong> {hotel.rating ? hotel.rating : 'N/A'}</p>
