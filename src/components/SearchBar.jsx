@@ -5,7 +5,8 @@ const SearchBar = ({
   placeholder = "Where are you going?", 
   onSearch, 
   className = "",
-  size = "default" // "default" or "large"
+  size = "default", // "default" or "large"
+  maxWidth = "max-w-[480px]" //default width
 }) => {
   const [searchValue, setSearchValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -62,7 +63,7 @@ const SearchBar = ({
   const currentSize = sizeClasses[size];
 
   return (
-    <label className={`flex flex-col min-w-40 ${currentSize.container} w-full max-w-[480px] ${className}`}>
+    <label className={`flex flex-col min-w-40 ${currentSize.container} w-full ${maxWidth} ${className}`}>
       <div className="flex w-full flex-1 items-stretch rounded-xl h-full">
         <div
           className="text-[#4e7997] flex border border-[#d0dde7] bg-slate-50 items-center justify-center pl-[15px] rounded-l-xl border-r-0"

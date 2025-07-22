@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ApiService from '../services/api';
+import { SearchBarHotelDetails } from "../components/SearchBarHotelDetails";
 
 const HotelDetails = () => {
   const { id } = useParams();
@@ -52,7 +53,9 @@ const HotelDetails = () => {
   if (!hotel) return <div>Loading hotel details...</div>;
 
   return (
+    
     <div>
+      <SearchBarHotelDetails/>
       <h1>Name: {hotel.name}</h1>
       <p><strong>Address:</strong> {hotel.address}</p>
       <p><strong>Rating:</strong> {hotel.rating ? hotel.rating : 'N/A'}</p>
