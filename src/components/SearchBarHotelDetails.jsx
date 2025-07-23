@@ -9,8 +9,7 @@ export const SearchBarHotelDetails = () => {
         <SearchBar
           placeholder="Paris, France"
           size="large"  
-          className="w-full"
-          maxWidth="max-w-full"
+          className="w-full max-w-screen-xl mx-auto"
           onSearch={(query, results) => {
             console.log("Hotel details search triggered:", query, results);
             // Optional: hook into router, state, or show results

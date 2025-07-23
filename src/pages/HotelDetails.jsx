@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ApiService from '../services/api';
 import { SearchBarHotelDetails } from "../components/SearchBarHotelDetails";
+import Map from '../components/Map';
+
 
 const HotelDetails = () => {
   const { id } = useParams();
@@ -9,8 +11,8 @@ const HotelDetails = () => {
   const [images, setImages] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
-  const [showDescriptionModal, setShowDescriptionModal] = useState(false);
-
+  const [showDescriptionModal, setShowDescriptionModal] = useState(false); // for description popup, need improve later (overflows)
+  //const [showMap, setShowMap] = useState(false); // for google map popup
 
   useEffect(() => {
     // First API call: get hotel details and images
@@ -112,12 +114,11 @@ const HotelDetails = () => {
         </div>
       )}
 
-  
 
 
 
 
-
+      <Map coordinates={{ lat: hotel.latitude, lng: hotel.longitude }} />
       <h1>Name: {hotel.name}</h1>
       <p><strong>Address:</strong> {hotel.address}</p>
       <p><strong>Rating:</strong> {hotel.rating ? hotel.rating : 'N/A'}</p>
