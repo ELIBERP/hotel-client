@@ -9,6 +9,8 @@ const HotelDetails = () => {
   const [images, setImages] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
+  const [showDescriptionModal, setShowDescriptionModal] = useState(false);
+
 
   useEffect(() => {
     // First API call: get hotel details and images
@@ -63,18 +65,21 @@ const HotelDetails = () => {
           <img
             src={images[0]}
             alt="Main Hotel View"
-            className="rounded-xl w-full md:w-1/2 object-cover"
+            className="rounded-xl w-full md:w-[600px] h-[350px] object-cover"
           />
 
           <div className="flex flex-col justify-start md:w-1/2">
             <h2 className="text-xl font-semibold text-[#0e151b] mb-2">About this place</h2>
             <a href="#" className="text-sm text-[#1a73e8] underline mb-2">📍 {hotel.address} </a>
-            <p className="text-sm text-[#0e151b] leading-relaxed">
-              {hotel.description.length > 500
-                ? hotel.description.slice(0, 500) + '...'
-                : hotel.description}
+            <p className="text-sm text-[#0e151b] leading-relaxed max-w-lg">
+              {hotel.description?.split('. ').slice(0, 3).join('. ') + '.'}
             </p>
-            <a href="#" className="mt-2 text-sm text-[#1a73e8] underline">View more details...</a>
+            <button
+              onClick={() => setShowDescriptionModal(true)}
+              className="mt-2 text-sm text-[#1a73e8] underline self-start"
+            >
+              View more details...
+            </button>
           </div>
         </div>
         <div className="flex gap-4 overflow-x-auto py-4">
@@ -88,6 +93,25 @@ const HotelDetails = () => {
           ))}
         </div>
       </div>
+      {showDescriptionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4">
+            <h2 className="text-xl font-semibold mb-4">Full Description</h2>
+            <p className="text-sm text-[#0e151b] leading-relaxed whitespace-pre-line">
+              {hotel.description}
+            </p>
+            <div className="mt-6 text-right">
+              <button
+                onClick={() => setShowDescriptionModal(false)}
+                className="text-sm text-[#1a73e8] underline"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
   
 
 
