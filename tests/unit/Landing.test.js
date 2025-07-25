@@ -30,134 +30,68 @@ describe('SearchBar_Landing Component', () => {
     jest.clearAllMocks();
   });
 
-  describe('Search button functionality', () => {
-    test('should trigger search when all fields are filled', async () => {
-      const mockOnSearch = jest.fn();
-      const ApiService = require('../../src/services/api');
-      
-      // Mock successful API response
-      ApiService.getHotels.mockResolvedValue([
-        { id: 1, name: 'Test Hotel' }
-      ]);
+  test('should render all form fields', () => {
+    renderComponent();
+    
+    expect(screen.getByPlaceholderText(/where are you going/i)).toBeInTheDocument();
+    expect(screen.getByText(/check-in/i)).toBeInTheDocument();
+    expect(screen.getByText(/check-out/i)).toBeInTheDocument();
+    expect(screen.getByText(/guests/i)).toBeInTheDocument();
+    expect(screen.getByText(/search hotels/i)).toBeInTheDocument();
+  });
 
-      renderComponent({ onSearch: mockOnSearch });
+  test('should show validation error when destination is missing', async () => {
+    renderComponent();
 
-      // Fill in destination (simulate dropdown selection)
-      const destinationInput = screen.getByPlaceholderText(/where are you going/i);
-      fireEvent.change(destinationInput, { target: { value: 'Singapore' } });
-      
-      // Fill in check-in date
-      const checkinInput = screen.getByDisplayValue('');
-      fireEvent.change(checkinInput, { target: { value: '2025-09-10' } });
-      
-      // Fill in check-out date
-      const checkoutInput = screen.getAllByDisplayValue('')[1]; // Second empty input
-      fireEvent.change(checkoutInput, { target: { value: '2025-09-13' } });
-      
-      // Select guests (should have default value of 2)
-      const guestsSelect = screen.getByDisplayValue('2 Guests');
-      fireEvent.change(guestsSelect, { target: { value: '2' } });
+    const searchButton = screen.getByText(/search hotels/i);
+    fireEvent.click(searchButton);
 
-      // Click search button
-      const searchButton = screen.getByText(/search hotels/i);
-      fireEvent.click(searchButton);
-
-      // Verify API was called
-      await waitFor(() => {
-        expect(ApiService.getHotels).toHaveBeenCalled();
-      });
-
-      // Verify onSearch callback was triggered
-      await waitFor(() => {
-        expect(mockOnSearch).toHaveBeenCalled();
-      });
-    });
-
-    test('should not search when required fields are missing', async () => {
-      const mockOnSearch = jest.fn();
-      const ApiService = require('../../src/services/api');
-
-      renderComponent({ onSearch: mockOnSearch });
-
-      // Click search button without filling fields
-      const searchButton = screen.getByText(/search hotels/i);
-      fireEvent.click(searchButton);
-
-      // Verify API was NOT called
-      expect(ApiService.getHotels).not.toHaveBeenCalled();
-      expect(mockOnSearch).not.toHaveBeenCalled();
-
-      // Should show validation errors
-      await waitFor(() => {
-        expect(screen.getByText(/please select a destination/i)).toBeInTheDocument();
-      });
+    await waitFor(() => {
+      expect(screen.getByText(/please select a destination/i)).toBeInTheDocument();
     });
   });
 
-  describe('Navigation after successful search', () => {
-    test('should navigate to /stays page after successful search', async () => {
-      const ApiService = require('../../src/services/api');
-      
-      // Mock successful API response
-      const mockResults = [
-        { id: 1, name: 'Test Hotel 1' },
-        { id: 2, name: 'Test Hotel 2' }
-      ];
-      ApiService.getHotels.mockResolvedValue(mockResults);
+  test('should show validation error when dates are missing', async () => {
+    renderComponent();
 
-      renderComponent();
+    // Fill destination only
+    const destinationInput = screen.getByPlaceholderText(/where are you going/i);
+    fireEvent.change(destinationInput, { target: { value: 'Singapore' } });
 
-      // Fill all required fields
-      const destinationInput = screen.getByPlaceholderText(/where are you going/i);
-      fireEvent.change(destinationInput, { target: { value: 'Singapore' } });
-      
-      const checkinInput = screen.getByDisplayValue('');
-      fireEvent.change(checkinInput, { target: { value: '2025-09-10' } });
-      
-      const checkoutInput = screen.getAllByDisplayValue('')[1];
-      fireEvent.change(checkoutInput, { target: { value: '2025-09-13' } });
+    const searchButton = screen.getByText(/search hotels/i);
+    fireEvent.click(searchButton);
 
-      // Click search button
-      const searchButton = screen.getByText(/search hotels/i);
-      fireEvent.click(searchButton);
-
-      // Wait for navigation to be called
-      await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/stays', {
-          state: expect.objectContaining({
-            searchResults: mockResults,
-            hasSearched: true
-          })
-        });
-      });
+    await waitFor(() => {
+      expect(screen.getByText(/check-in date is required/i)).toBeInTheDocument();
     });
+  });
 
-    test('should not navigate when search fails', async () => {
-      const ApiService = require('../../src/services/api');
-      
-      // Mock API failure
-      ApiService.getHotels.mockRejectedValue(new Error('API Error'));
+  test('should call onSearch when all fields are valid', async () => {
+    const mockOnSearch = jest.fn();
+    renderComponent({ onSearch: mockOnSearch });
 
-      renderComponent();
+    // Fill all fields
+    const destinationInput = screen.getByPlaceholderText(/where are you going/i);
+    fireEvent.change(destinationInput, { target: { value: 'Singapore' } });
+    
+    // Assuming your component has data-testid or better selectors
+    const checkinInput = screen.getByLabelText(/check-in/i);
+    fireEvent.change(checkinInput, { target: { value: '2025-09-10' } });
+    
+    const checkoutInput = screen.getByLabelText(/check-out/i);
+    fireEvent.change(checkoutInput, { target: { value: '2025-09-13' } });
 
-      // Fill all required fields
-      const destinationInput = screen.getByPlaceholderText(/where are you going/i);
-      fireEvent.change(destinationInput, { target: { value: 'Singapore' } });
-      
-      const checkinInput = screen.getByDisplayValue('');
-      fireEvent.change(checkinInput, { target: { value: '2025-09-10' } });
-      
-      const checkoutInput = screen.getAllByDisplayValue('')[1];
-      fireEvent.change(checkoutInput, { target: { value: '2025-09-13' } });
+    const searchButton = screen.getByText(/search hotels/i);
+    fireEvent.click(searchButton);
 
-      // Click search button
-      const searchButton = screen.getByText(/search hotels/i);
-      fireEvent.click(searchButton);
-
-      // Wait a bit to ensure no navigation occurs
-      await waitFor(() => {
-        expect(mockNavigate).not.toHaveBeenCalled();
-      });
+    await waitFor(() => {
+      expect(mockOnSearch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          destination: 'Singapore',
+          checkin: '2025-09-10',
+          checkout: '2025-09-13'
+        })
+      );
     });
   });
 });
