@@ -13,6 +13,13 @@ const HotelDetails = () => {
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [showDescriptionModal, setShowDescriptionModal] = useState(false); // for description popup, need improve later (overflows)
   //const [showMap, setShowMap] = useState(false); // for google map popup
+  const [selectedFilter, setSelectedFilter] = useState('all');
+  const filteredRooms = rooms.filter(room => {
+  if (selectedFilter === 'all') return true;
+  if (selectedFilter === '1') return room.roomDescription?.toLowerCase().includes('1');
+  if (selectedFilter === '2') return room.roomDescription?.toLowerCase().includes('2');
+  return true;
+});
 
   useEffect(() => {
     // First API call: get hotel details and images
@@ -20,7 +27,7 @@ const HotelDetails = () => {
       .then((data) => {
         setHotel(data);
 
-        const { prefix, suffix } = data.image_details;
+        const { prefix, suffix } =  data.image_details;
         const indices = data.hires_image_index
           .split(',')
           .map((str) => str.trim())
@@ -119,6 +126,59 @@ const HotelDetails = () => {
 
 
       <Map coordinates={{ lat: hotel.latitude, lng: hotel.longitude }} />
+      <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-10">
+        <h2 className="text-2xl font-bold text-[#0e151b] mb-4">Choose your room</h2>
+
+        {/* Filter Buttons */}
+        <div className="flex gap-4 mb-6">
+          {['all', '2', '1'].map((type) => (
+            <button
+              key={type}
+              onClick={() => setSelectedFilter(type)}
+              className={`px-4 py-2 rounded-full border 
+                ${selectedFilter === type ? 'bg-black text-white' : 'bg-gray-100 text-black'} 
+                hover:bg-gray-200 transition`}
+            >
+              {type === 'all' ? 'All rooms' : `${type} Bed`}
+            </button>
+          ))}
+        </div>
+
+        {/* Grid of Room Cards */}
+        {loadingRooms ? (
+          <p>Loading room details...</p>
+        ) : filteredRooms.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredRooms.map((room, idx) => (
+              <div key={idx} className="border rounded-2xl overflow-hidden shadow-sm">
+                <img
+                  src={room.images?.[0]?.high_resolution_url || room.images?.[0]?.url}
+                  alt={`Room ${idx}`}
+                  className="h-48 w-full object-cover"
+                />
+                <div className="p-4">
+                  <h3 className="font-semibold text-lg text-[#0e151b] mb-1">
+                    {room.roomDescription || 'Room Name Placeholder'}
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    bedsize · roomsize · optional detail
+                  </p>
+                  <button className="px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200 text-sm font-medium">
+                    View Details
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p>No rooms available for selected filter.</p>
+        )}
+      </div>
+
+
+
+
+      {/* Skeleton code for reference */}
       <h1>Name: {hotel.name}</h1>
       <p><strong>Address:</strong> {hotel.address}</p>
       <p><strong>Rating:</strong> {hotel.rating ? hotel.rating : 'N/A'}</p>
