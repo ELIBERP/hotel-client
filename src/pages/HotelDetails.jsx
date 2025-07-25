@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import ApiService from '../services/api';
 import { SearchBarHotelDetails } from "../components/SearchBarHotelDetails";
 import Map from '../components/Map';
+import SearchBar from '../components/SearchBar';
 import RoomGrid from '../components/RoomGrid';
 
 
@@ -67,8 +68,20 @@ const HotelDetails = () => {
   return (
     
     <div>
-      <SearchBarHotelDetails/>
+       
       <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-6">
+        <div className="w-full border-b border-gray-200 bg-white mb-6">
+          <div className="w-full px-6 sm:px-16 py-4 bg-[#f2f2f4] rounded-xl shadow-sm">
+            <SearchBar
+              placeholder="Paris, France"
+              size="hotelDetailPage" 
+              className="w-full max-w-screen-xl mx-auto"
+              onSearch={(query, results) => {
+                console.log("Hotel details search triggered:", query, results);
+              }}
+            />
+          </div>
+        </div>
         <h1 className="text-2xl font-bold text-[#0e151b] mb-6">{hotel.name}</h1>
         <div className="flex flex-col md:flex-row gap-8 mb-6">
 
