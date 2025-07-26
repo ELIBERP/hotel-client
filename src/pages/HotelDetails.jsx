@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ApiService from '../services/api';
-import { SearchBarHotelDetails } from "../components/SearchBarHotelDetails";
 import Map from '../components/Map';
 import SearchBar from '../components/SearchBar';
 import RoomGrid from '../components/RoomGrid';
