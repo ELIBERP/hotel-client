@@ -18,7 +18,7 @@ const Landing = () => {
       d.term.toLowerCase().includes(searchQuery.toLowerCase())
     );
     if (destination) {
-      navigate(`/searchResults/${destination.uid}`);
+      navigate(`/search?search=${searchQuery}&destination_id=${destination.uid}`);
     } else {
       alert("Destination not found");
     }

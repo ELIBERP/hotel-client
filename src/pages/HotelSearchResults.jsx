@@ -1,15 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import destinations from '../assets/destinations.json';
 import StarRating from '../components/StarRating';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import ApiService from '../services/api';
 
 const HotelSearchResults = () => {
   const [hotels, setHotels] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { destinationId } = useParams(); // this is the UID, e.g., 'vJh2'
   const [prices, setPrices] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const HOTELS_PER_PAGE = 15;
+
+  // Get query params from URL
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const destinationId = searchParams.get('destination_id') || '';
+  const searchQuery = searchParams.get('search') || '';
 
   // find destination term using uid
   const destEntry = destinations.find((d) => d.uid === destinationId);
@@ -19,12 +25,30 @@ const HotelSearchResults = () => {
     const fetchHotels = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:3000/api/hotels?destination_id=${destinationId}`);
-        const data = await res.json();
-        setHotels(data);
-        const priceRes = await fetch(`http://localhost:3000/api/hotels/prices?destination_id=${destinationId}&checkin=2025-10-01&checkout=2025-10-07&lang=en_US&currency=SGD&country_code=SG&guests=2&partner_id=1`);
-        const priceData = await priceRes.json();
-        console.log('🚨 priceData:', priceData);
+        // Use ApiService.getHotels for hotel list
+        const hotelData = await ApiService.getHotels({ destination_id: destinationId });
+        // Ensure hotels is always an array
+        if (Array.isArray(hotelData)) {
+          setHotels(hotelData);
+        } else if (hotelData && Array.isArray(hotelData.hotels)) {
+          setHotels(hotelData.hotels);
+        } else {
+          setHotels([]);
+        }
+
+        // Use ApiService.getHotelRoomsByID for prices (if you want per-hotel prices, you may need to loop)
+        // Here, we fetch prices for the destination as before
+        const priceQuery = {
+          destination_id: destinationId,
+          checkin: '2025-10-01',
+          checkout: '2025-10-07',
+          lang: 'en_US',
+          currency: 'SGD',
+          country_code: 'SG',
+          guests: 2,
+          partner_id: 1
+        };
+        const priceData = await ApiService.getHotelRoomsByID(destinationId, priceQuery);
         setPrices(priceData.hotels || []);
       } catch (err) {
         console.error('Failed to fetch hotels:', err);
