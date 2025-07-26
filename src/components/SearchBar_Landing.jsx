@@ -7,6 +7,7 @@ const SearchBar_Landing = ({
   onSearch, 
   className = ""
 }) => {
+  // define variables
   const [checkinDate, setCheckinDate] = useState("");
   const [checkoutDate, setCheckoutDate] = useState("");
   const [adults, setAdults] = useState(2);
@@ -41,7 +42,7 @@ const SearchBar_Landing = ({
 
     // Set a new timer for debounced search
     debounceTimerRef.current = setTimeout(() => {
-      if (newValue.length >= 2) {
+      if (newValue.length >= 2) { // start auto complete search on 2nd input
         console.log('Searching destinations for:', newValue); // Debug log
         const filtered = destinationsData
           .filter(destination => 
@@ -50,7 +51,7 @@ const SearchBar_Landing = ({
             typeof destination.term === 'string' &&
             destination.term.toLowerCase().includes(newValue.toLowerCase())
           )
-          .slice(0, 10); // Limit to 10 results
+          .slice(0, 10); // limit to 10 results
         
         console.log('Found destinations (FROM destinations.json):', filtered.length); // Debug log
         setFilteredDestinations(filtered);
