@@ -5,7 +5,7 @@ const SearchBar = ({
   placeholder = "Where are you going?", 
   onSearch, 
   className = "",
-  size = "default" // "default" or "large"
+  size = "default", // "default" or "large"
 }) => {
   const [searchValue, setSearchValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -83,14 +83,21 @@ const SearchBar = ({
       container: "h-14 @[480px]:h-16",
       input: "text-sm @[480px]:text-base",
       button: "h-10 px-4 @[480px]:h-12 @[480px]:px-5 text-sm @[480px]:text-base"
+    },
+    hotelDetailPage: { 
+    container: "h-14 sm:h-16",
+    input: "text-base sm:text-lg",
+    button: "h-10 sm:h-12 px-4 sm:px-6 text-sm sm:text-base"
     }
+    
   };
 
   const currentSize = sizeClasses[size];
 
+
 return (
-  <div className="relative w-full max-w-[480px]">
-    <label className={`flex flex-col min-w-40 ${currentSize.container} w-full max-w-[480px] ${className}`}>
+  <div div className={`relative w-full ${className}`}>
+    <label className={`flex flex-col min-w-40 ${currentSize.container} w-full`}>
       <div className="flex w-full flex-1 items-stretch rounded-xl h-full">
         <div
           className="text-[#4e7997] flex border border-[#d0dde7] bg-slate-50 items-center justify-center pl-[15px] rounded-l-xl border-r-0"
