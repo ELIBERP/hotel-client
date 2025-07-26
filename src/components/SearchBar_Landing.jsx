@@ -7,11 +7,19 @@ const SearchBar_Landing = ({
   onSearch, 
   className = ""
 }) => {
+  // define variables
   const [checkinDate, setCheckinDate] = useState("");
   const [checkoutDate, setCheckoutDate] = useState("");
-  const [guests, setGuests] = useState(2);
+  const [adults, setAdults] = useState(2);
+  const [children, setChildren] = useState(0);
+  const [rooms, setRooms] = useState(1);
+  const [guests, setGuests] = useState(1);
+  const [showGuestRoomDropdown, setShowGuestRoomDropdown] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [lang] = useState("en_US");
+  const [currency] = useState("SGD");
+  const [partner_id] = useState("1")
   
   // Destination autocomplete states
   const [searchValue, setSearchValue] = useState("");
@@ -20,6 +28,7 @@ const SearchBar_Landing = ({
   const [filteredDestinations, setFilteredDestinations] = useState([]);
   const debounceTimerRef = useRef(null);
   const dropdownRef = useRef(null);
+  const guestRoomDropdownRef = useRef(null);
 
   // Handle destination input change with debouncing
   const handleDestinationInputChange = (e) => {
@@ -33,7 +42,7 @@ const SearchBar_Landing = ({
 
     // Set a new timer for debounced search
     debounceTimerRef.current = setTimeout(() => {
-      if (newValue.length >= 2) {
+      if (newValue.length >= 2) { // start auto complete search on 2nd input
         console.log('Searching destinations for:', newValue); // Debug log
         const filtered = destinationsData
           .filter(destination => 
@@ -42,7 +51,7 @@ const SearchBar_Landing = ({
             typeof destination.term === 'string' &&
             destination.term.toLowerCase().includes(newValue.toLowerCase())
           )
-          .slice(0, 10); // Limit to 10 results
+          .slice(0, 10); // limit to 10 results
         
         console.log('Found destinations (FROM destinations.json):', filtered.length); // Debug log
         setFilteredDestinations(filtered);
@@ -72,6 +81,9 @@ const SearchBar_Landing = ({
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowDropdown(false);
+      }
+      if (guestRoomDropdownRef.current && !guestRoomDropdownRef.current.contains(event.target)) {
+        setShowGuestRoomDropdown(false);
       }
     };
 
@@ -123,8 +135,14 @@ const SearchBar_Landing = ({
     }
     
     // Guest validation
-    if (guests < 1 || guests > 10) {
-      newErrors.guests = "Guests must be between 1 and 10";
+    const totalGuests = adults + children;
+    if (totalGuests < 1 || totalGuests > 10) {
+      newErrors.guests = "Total guests must be between 1 and 10";
+    }
+    
+    // Room validation
+    if (rooms < 1 || rooms > 5) {
+      newErrors.rooms = "Rooms must be between 1 and 5";
     }
     
     setErrors(newErrors);
@@ -145,13 +163,26 @@ const SearchBar_Landing = ({
     setIsLoading(true);
     setErrors({});
     
+    // Calculate guests value based on number of rooms before we call API
+    let guests;
+    if (rooms === 1) {
+      guests = adults + children;
+    } else {
+      // For multiple rooms, each room gets the total number of guests
+      const totalGuests = adults + children;
+      guests = Array(rooms).fill(totalGuests).join('|');
+    }
+    
     try {
-      // Prepare search parameters
+      // search parameters
       const searchParams = {
         destination_id: searchId.trim(),
         checkin: formatDateForAPI(checkinDate),
         checkout: formatDateForAPI(checkoutDate),
-        guests: guests
+        lang: lang,
+        currency: currency,
+        guests: guests,
+        partner_id: partner_id
       };
       
       console.log('Search parameters:', searchParams);
@@ -323,10 +354,10 @@ const SearchBar_Landing = ({
         </div>
       </div>
 
-      {/* Number of Guests - full width below */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-[#0e151b] mb-1">
-          Guests
+      {/* Number of Guests and Rooms - full width below */}
+      <div className="mb-6" ref={guestRoomDropdownRef}>
+        <label className="block text-sm font-medium text-white mb-1">
+          Guests & Rooms
         </label>
         <div className="relative">
           <div className="absolute left-3 inset-y-0 flex items-center justify-center text-[#4e7997]">
@@ -334,27 +365,128 @@ const SearchBar_Landing = ({
               <path d="M117.25,157.92a60,60,0,1,0-66.5,0A95.83,95.83,0,0,0,3.53,195.63a8,8,0,1,0,13.4,8.74,80,80,0,0,1,134.14,0,8,8,0,0,0,13.4-8.74A95.83,95.83,0,0,0,117.25,157.92ZM40,108a44,44,0,1,1,44,44A44.05,44.05,0,0,1,40,108Zm210.27,98.63a8,8,0,0,1-11.07,2.22A79.75,79.75,0,0,0,208,196a8,8,0,0,1,0-16,44,44,0,1,0-16.34-84.87,8,8,0,1,1-5.94-14.85,60,60,0,0,1,55.53,105.64,95.83,95.83,0,0,1,47.22,37.71A8,8,0,0,1,250.27,206.63Z"></path>
             </svg>
           </div>
-          <select
+          <button
+            type="button"
             className={`w-full pl-10 pr-3 py-3 border border-[#d0dde7] rounded-lg bg-slate-50 text-[#0e151b] text-sm @[480px]:text-base
-              focus:outline-none focus:ring-2 focus:ring-[#47a6ea] focus:border-transparent
-              ${errors.guests ? 'border-red-400' : ''}`}
-            value={guests}
-            onChange={(e) => {
-              setGuests(parseInt(e.target.value));
-              if (errors.guests) {
-                setErrors(prev => ({ ...prev, guests: '' }));
-              }
-            }}
+              focus:outline-none focus:ring-2 focus:ring-[#47a6ea] focus:border-transparent text-left
+              ${errors.guests || errors.rooms ? 'border-red-400' : ''}`}
+            onClick={() => setShowGuestRoomDropdown(!showGuestRoomDropdown)}
           >
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-              <option key={num} value={num}>
-                {num} {num === 1 ? 'Guest' : 'Guests'}
-              </option>
-            ))}
-          </select>
+            {adults + children} {adults + children === 1 ? 'Guest' : 'Guests'}, {rooms} {rooms === 1 ? 'Room' : 'Rooms'}
+          </button>
+          
+          {/* Guests & Rooms Dropdown */}
+          {showGuestRoomDropdown && (
+            <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-b-lg shadow-lg z-50 mt-1 p-4">
+              {/* Adults */}
+              <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                <div>
+                  <div className="font-medium text-[#0e151b] text-sm">Adults</div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button
+                    type="button"
+                    className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => setAdults(Math.max(1, adults - 1))}
+                    disabled={adults <= 1}
+                  >
+                    <span className="text-lg leading-none">−</span>
+                  </button>
+                  <span className="text-sm font-medium min-w-[20px] text-center">{adults}</span>
+                  <button
+                    type="button"
+                    className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => setAdults(Math.min(10, adults + 1))}
+                    disabled={adults >= 10}
+                  >
+                    <span className="text-lg leading-none">+</span>
+                  </button>
+                </div>
+              </div>
+              
+              {/* Children */}
+              <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                <div>
+                  <div className="font-medium text-[#0e151b] text-sm">Children</div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button
+                    type="button"
+                    className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => setChildren(Math.max(0, children - 1))}
+                    disabled={children <= 0}
+                  >
+                    <span className="text-lg leading-none">−</span>
+                  </button>
+                  <span className="text-sm font-medium min-w-[20px] text-center">{children}</span>
+                  <button
+                    type="button"
+                    className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => setChildren(Math.min(10, children + 1))}
+                    disabled={children >= 10}
+                  >
+                    <span className="text-lg leading-none">+</span>
+                  </button>
+                </div>
+              </div>
+              
+              {/* Rooms */}
+              <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                <div>
+                  <div className="font-medium text-[#0e151b] text-sm">Rooms</div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button
+                    type="button"
+                    className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => setRooms(Math.max(1, rooms - 1))}
+                    disabled={rooms <= 1}
+                  >
+                    <span className="text-lg leading-none">−</span>
+                  </button>
+                  <span className="text-sm font-medium min-w-[20px] text-center">{rooms}</span>
+                  <button
+                    type="button"
+                    className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => setRooms(Math.min(5, rooms + 1))}
+                    disabled={rooms >= 5}
+                  >
+                    <span className="text-lg leading-none">+</span>
+                  </button>
+                </div>
+              </div>
+              
+              {/* Apply and Reset buttons */}
+              <div className="flex items-center justify-between pt-3">
+                <button
+                  type="button"
+                  className={`text-sm ${adults === 2 && children === 0 && rooms === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-[#47a6ea] hover:text-[#3a95d9] cursor-pointer'}`}
+                  disabled={adults === 2 && children === 0 && rooms === 1}
+                  onClick={() => {
+                    if (!(adults === 2 && children === 0 && rooms === 1)) {
+                      setAdults(2);
+                      setChildren(0);
+                      setRooms(1);
+                    }
+                  }}
+                >
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  className="bg-[#47a6ea] hover:bg-[#3a95d9] text-white px-4 py-2 rounded-lg text-sm font-medium"
+                  onClick={() => {
+                    setShowGuestRoomDropdown(false);
+                  }}
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-        {errors.guests && (
-          <p className="mt-1 text-sm text-red-600">{errors.guests}</p>
+        {(errors.guests || errors.rooms) && (
+          <p className="mt-1 text-sm text-red-600">{errors.guests || errors.rooms}</p>
         )}
       </div>
 
