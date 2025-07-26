@@ -11,6 +11,7 @@ const SearchBar = ({
   const [searchValue, setSearchValue] = useState("");
   const [searchId, setSearchId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
   const debounceTimerRef = useRef(null);
 
   const handleInputChange = (e) => {
@@ -27,6 +28,12 @@ const SearchBar = ({
     debounceTimerRef.current = setTimeout(() => {
       console.log("Debounced search input:", newValue); // debugging purpose
       
+      // Show dropdown when typing
+      if (newValue.length > 0) {
+        setShowDropdown(true);
+      } else {
+        setShowDropdown(false);
+      }
       
       // Here you could also make an API call for suggestions
       // if you want to fetch search suggestions as the user types
@@ -83,14 +90,31 @@ const SearchBar = ({
       container: "h-14 @[480px]:h-16",
       input: "text-sm @[480px]:text-base",
       button: "h-10 px-4 @[480px]:h-12 @[480px]:px-5 text-sm @[480px]:text-base"
+    },
+    hotelDetailPage: { 
+      container: "h-14 sm:h-16",
+      input: "text-base sm:text-lg",
+      button: "h-10 sm:h-12 px-4 sm:px-6 text-sm sm:text-base"
     }
+  };
+
+  const filteredDestinations = destinationsData
+  .filter(dest =>
+    dest.term && dest.term.toLowerCase().includes(searchValue.toLowerCase())
+  )
+  .slice(0, 8); // Limit to 8 suggestions for better UX
+
+  const handleDropdownClick = (term, uid) => {
+    setSearchValue(term);
+    setSearchId(uid);
+    setShowDropdown(false);
   };
 
   const currentSize = sizeClasses[size];
 
   return (
-    <div className="relative w-full max-w-[480px]">
-      <label className={`flex flex-col min-w-40 ${currentSize.container} w-full max-w-[480px] ${className}`}>
+    <div className="relative w-full ">
+      <label className={`flex flex-col ${currentSize.container} w-full ${className}`}>
         <div className="flex w-full flex-1 items-stretch rounded-xl h-full">
           <div
             className="text-[#4e7997] flex border border-[#d0dde7] bg-slate-50 items-center justify-center pl-[15px] rounded-l-xl border-r-0"
@@ -130,6 +154,22 @@ const SearchBar = ({
           </div>
         </div>
       </label>
+
+      {/* Simple Dropdown */}
+      {showDropdown && filteredDestinations.length > 0 && (
+        //set box below search bar
+        <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-b-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+          {filteredDestinations.map((destination, index) => ( //list items
+            <div
+              key={index}
+              className="p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+              onClick={() => handleDropdownClick(destination.term, destination.uid)}
+            >
+              {destination.term}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

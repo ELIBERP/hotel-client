@@ -44,6 +44,8 @@ const Landing = () => {
                             <SearchBar_Landing 
                                 placeholder="Where to next?"
                                 onSearch={handleSearch}
+                                size="large"
+                                className="max-w-[480px] mx-auto"
                             />
                         </div>
                     </div>
