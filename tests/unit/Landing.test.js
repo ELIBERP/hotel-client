@@ -34,7 +34,7 @@ describe('SearchBar_Landing Component - Basic UI Tests', () => {
     jest.useRealTimers();
   });
 
-  // === DESTINATION AUTOCOMPLETE ===
+  // DESTINATION AUTOCOMPLETE
   describe('Destination Search', () => {
     test('should show dropdown with destinations when typing', async () => {
       renderComponent();
@@ -49,7 +49,7 @@ describe('SearchBar_Landing Component - Basic UI Tests', () => {
     });
   });
 
-  // === GUESTS & ROOMS DROPDOWN ===
+  // GUESTS & ROOMS DROPDOWN 
   describe('Guests Selection', () => {
     test('should open guests dropdown and change counts', () => {
       renderComponent();
@@ -66,7 +66,7 @@ describe('SearchBar_Landing Component - Basic UI Tests', () => {
     });
   });
 
-  // === SEARCH BUTTON ===
+  // SEARCH BUTTON 
   describe('Search Button', () => {
     test('should show validation error when destination is missing', async () => {
       renderComponent();
