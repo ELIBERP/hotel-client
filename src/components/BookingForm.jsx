@@ -1,7 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import ApiService from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 const BookingForm = () => {
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
+  
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -13,6 +18,25 @@ const BookingForm = () => {
     cvv: "",
     billingAddress: ""
   });
+
+  // Pre-fill form with user data if authenticated
+  useEffect(() => {
+    if (isAuthenticated() && user) {
+      setFormData(prev => ({
+        ...prev,
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        email: user.email || ""
+      }));
+    }
+  }, [user, isAuthenticated]);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      navigate('/login', { state: { from: { pathname: '/booking' } } });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
