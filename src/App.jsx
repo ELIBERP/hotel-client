@@ -7,6 +7,11 @@ import Landing from "./pages/LandingContent";
 import About from "./pages/About";
 import Stays from "./pages/Stays";
 import HotelDetails from "./pages/HotelDetails";
+import BookingSuccess from "./pages/BookingSuccess";
+import BookingCancel from "./pages/BookingCancel";
+import TestPayment from "./pages/TestPayment";
+import BookingForm from "./pages/BookingForm";
+import BookingDemo from "./pages/BookingDemo";
 import { logEnvironmentInfo } from "./config/env";
 import CreateBooking from "./pages/CreateBooking";
 
@@ -29,6 +34,11 @@ const App = () => {
               <Route path="/about" element={<About />} />
               <Route path="/hotels/:id" element={<HotelDetails />} />
               <Route path="/booking" element={<CreateBooking />} />
+              <Route path="/booking-form" element={<BookingForm />} />
+              <Route path="/booking-demo" element={<BookingDemo />} />
+              <Route path="/test-payment" element={<TestPayment />} />
+              <Route path="/booking-success" element={<BookingSuccess />} />
+              <Route path="/booking-cancel" element={<BookingCancel />} />
             </Routes>
           </main>
           <Footer />
