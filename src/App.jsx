@@ -9,6 +9,11 @@ import Landing from "./pages/LandingContent";
 import About from "./pages/About";
 import Stays from "./pages/Stays";
 import HotelDetails from "./pages/HotelDetails";
+import BookingSuccess from "./pages/BookingSuccess";
+import BookingCancel from "./pages/BookingCancel";
+import TestPayment from "./pages/TestPayment";
+import BookingForm from "./pages/BookingForm";
+import BookingDemo from "./pages/BookingDemo";
 import CreateBooking from "./pages/CreateBooking";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -42,6 +47,11 @@ const App = () => {
                     </ProtectedRoute>
                   } 
                 />
+                <Route path="/booking-form" element={<BookingForm />} />
+                <Route path="/booking-demo" element={<BookingDemo />} />
+                <Route path="/test-payment" element={<TestPayment />} />
+                <Route path="/booking-success" element={<BookingSuccess />} />
+                <Route path="/booking-cancel" element={<BookingCancel />} />
               </Routes>
             </main>
             <Footer />

@@ -143,6 +143,19 @@ class ApiService {
       localStorage.setItem('authenticated', 'true');
     }
   }
+
+  // Payment methods
+  async createCheckoutSession(bookingData) {
+    return this.post('/api/payment/create-checkout-session', bookingData);
+  }
+
+  async getBookingDetails(sessionId) {
+    return this.get(`/api/payment/booking-details/${sessionId}`);
+  }
+
+  async updateBookingStatus(bookingId, status) {
+    return this.put(`${getApiEndpoint('bookings')}/${bookingId}/status`, { status });
+  }
 }
 
 export default new ApiService();

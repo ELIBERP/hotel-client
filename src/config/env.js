@@ -19,7 +19,8 @@ const config = {
     hotels: '/hotels',
     bookings: '/bookings',
     search: '/search',  
-    user: '/user'
+    user: '/user',
+    payment: '/api/payment'
   }
 };
 
