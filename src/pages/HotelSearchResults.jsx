@@ -335,5 +335,4 @@ const HotelSearchResults = () => {
     </div>
   );
 };
-
 export default HotelSearchResults;
