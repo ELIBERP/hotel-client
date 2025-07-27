@@ -16,6 +16,9 @@ const HotelSearchResults = () => {
   const searchParams = new URLSearchParams(location.search);
   const destinationId = searchParams.get('destination_id') || '';
   const searchQuery = searchParams.get('search') || '';
+  const checkin = searchParams.get('checkin') || '2025-10-01';
+  const checkout = searchParams.get('checkout') || '2025-10-07';
+  const guests = parseInt(searchParams.get('guests'), 10) || 2;
 
   // find destination term using uid
   const destEntry = destinations.find((d) => d.uid === destinationId);
@@ -36,19 +39,19 @@ const HotelSearchResults = () => {
           setHotels([]);
         }
 
-        // Use ApiService.getHotelRoomsByID for prices (if you want per-hotel prices, you may need to loop)
-        // Here, we fetch prices for the destination as before
+        // Use ApiService.getHotelRoomsByID for prices, using query params
         const priceQuery = {
           destination_id: destinationId,
-          checkin: '2025-10-01',
-          checkout: '2025-10-07',
+          checkin,
+          checkout,
           lang: 'en_US',
           currency: 'SGD',
-          country_code: 'SG',
-          guests: 2,
-          partner_id: 1
+          guests,
+          partner_id: 1089,
+          landing_page: 'wl-acme-earn',
+          product_type: 'earn'
         };
-        const priceData = await ApiService.getHotelRoomsByID(destinationId, priceQuery);
+        const priceData = await ApiService.getHotelsPrice(priceQuery);
         setPrices(priceData.hotels || []);
       } catch (err) {
         console.error('Failed to fetch hotels:', err);

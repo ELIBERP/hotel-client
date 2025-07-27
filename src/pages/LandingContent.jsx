@@ -1,28 +1,20 @@
 import React from 'react';
-import SearchBar from '../components/SearchBar';
 import { useNavigate } from 'react-router-dom';
-import destinations from '../assets/destinations.json';
+import SearchBar_Landing from '../components/SearchBar_Landing';
 
 const Landing = () => {
-    // const handleSearch = (searchQuery) => {
-    //     console.log('Searching for:', searchQuery);
-    //     // Here you can add your search logic, like:
-    //     // - Navigate to search results page
-    //     // - Call an API to search for hotels
-    //     // - Filter results, etc.
-    // };
     const navigate = useNavigate();
+    
+    const handleSearch = (destinationId, results, searchParams) => {
+        // more log messages for debugging
+        console.log('Searching for:', destinationId);
+        console.log('Search parameters:', searchParams);
+        console.log('Results:', results);
 
-  const handleSearch = (searchQuery) => {
-    const destination = destinations.find(d =>
-      d.term.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    if (destination) {
-      navigate(`/search?search=${searchQuery}&destination_id=${destination.uid}`);
-    } else {
-      alert("Destination not found");
-    }
-  };
+        // Build query string for /search route
+        const params = new URLSearchParams(searchParams).toString();
+        navigate(`/search?${params}`);
+    };
     
     return (
         <div className="px-40 flex flex-1 justify-center py-5 min-h-[500px]">
@@ -43,7 +35,7 @@ const Landing = () => {
                                     Search deals on hotels, homes, and much more...
                                 </h2>
                             </div>
-                            <SearchBar 
+                            <SearchBar_Landing 
                                 placeholder="Where to next?"
                                 onSearch={handleSearch}
                                 size="large"
