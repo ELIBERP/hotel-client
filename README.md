@@ -121,7 +121,7 @@ cp .env.example .env.local     # Create local environment file
 ## 📱 Features
 
 - **🔍 Hotel Search** - Search hotels by destination
-- **🧭 Navigation** - Multi-page routing (Home, Stays, About)
+- **🧭 Navigation** - Multi-page routinmg (Home, Stays, About)
 - **📱 Responsive Design** - Mobile-first responsive UI
 - **🔌 API Integration** - RESTful API communication
 - **⚙️ Environment Configuration** - Flexible environment setup
