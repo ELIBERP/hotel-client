@@ -102,6 +102,60 @@ class ApiService {
   async createBooking(bookingData) {
     return this.post(getApiEndpoint('bookings'), bookingData);
   }
+
+  // Authentication methods
+  async register(userData) {
+    return this.post('auth/register', userData);
+  }
+
+  async login(credentials) {
+    return this.post('auth/login', credentials);
+  }
+
+  async logout() {
+    // Clear local storage and make logout request if needed
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('authenticated');
+    return Promise.resolve();
+  }
+
+  // Check if user is authenticated
+  isAuthenticated() {
+    const user = localStorage.getItem('user');
+    return user !== null;
+  }
+
+  // Get current user
+  getCurrentUser() {
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
+  }
+
+  // Store user data after login/register
+  setUserData(userData) {
+    localStorage.setItem('user', JSON.stringify(userData.user));
+    // Only store token if it exists (backend doesn't currently send tokens)
+    if (userData.token) {
+      localStorage.setItem('token', userData.token);
+    } else {
+      // Store a simple flag to indicate authenticated session
+      localStorage.setItem('authenticated', 'true');
+    }
+  }
+
+  // Payment methods
+  async createCheckoutSession(bookingData) {
+    return this.post('/api/payment/create-checkout-session', bookingData);
+  }
+
+  async getBookingDetails(sessionId) {
+    return this.get(`/api/payment/booking-details/${sessionId}`);
+  }
+
+  async updateBookingStatus(bookingId, status) {
+    return this.put(`${getApiEndpoint('bookings')}/${bookingId}/status`, { status });
+  }
 }
 
 export default new ApiService();
