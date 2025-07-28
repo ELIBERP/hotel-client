@@ -9,6 +9,7 @@ import Landing from "./pages/LandingContent";
 import About from "./pages/About";
 import Stays from "./pages/Stays";
 import HotelDetails from "./pages/HotelDetails";
+import HotelSearchResults from './pages/HotelSearchResults';
 import BookingSuccess from "./pages/BookingSuccess";
 import BookingCancel from "./pages/BookingCancel";
 import TestPayment from "./pages/TestPayment";
@@ -37,6 +38,7 @@ const App = () => {
                 <Route path="/stays" element={<Stays />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/hotels/:id" element={<HotelDetails />} />
+                <Route path="/search" element={<HotelSearchResults />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route 
