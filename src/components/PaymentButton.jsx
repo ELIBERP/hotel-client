@@ -13,7 +13,7 @@ const PaymentButton = ({ bookingData, isSubmitting, onBeforePayment }) => {
         await onBeforePayment();
       }
 
-      const apiUrl = 'http://localhost:3000/api/payment/create-checkout-session';
+      const apiUrl = buildApiUrl('/api/payment/create-checkout-session');
       console.log('🔍 API URL being called:', apiUrl);
       
       const requestData = {
