@@ -1,13 +1,25 @@
 import React from 'react';
-import SearchBar from '../components/SearchBar';
+import { useNavigate } from 'react-router-dom';
+import SearchBar_Landing from '../components/SearchBar_Landing';
 
 const Landing = () => {
-    const handleSearch = (searchQuery) => {
-        console.log('Searching for:', searchQuery);
-        // Here you can add your search logic, like:
-        // - Navigate to search results page
-        // - Call an API to search for hotels
-        // - Filter results, etc.
+    const navigate = useNavigate();
+    
+    const handleSearch = (destinationId, results, searchParams) => {
+        // more log messages for debugging - COMMENTED out cuz duplicate
+        // console.log('Searching for:', destinationId);
+        // console.log('Search parameters:', searchParams);
+        // console.log('Results:', results);
+        
+        // Navigate to stays page with search results
+        // You can pass the results via state or URL params
+        navigate('/stays', { 
+            state: { 
+                searchResults: results, 
+                searchParams: searchParams,
+                hasSearched: true 
+            } 
+        });
     };
     
     return (
@@ -29,7 +41,7 @@ const Landing = () => {
                                     Search deals on hotels, homes, and much more...
                                 </h2>
                             </div>
-                            <SearchBar 
+                            <SearchBar_Landing 
                                 placeholder="Where to next?"
                                 onSearch={handleSearch}
                                 size="large"
