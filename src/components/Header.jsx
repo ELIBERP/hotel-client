@@ -1,7 +1,14 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Header = () => {
+  const { user, logout, isAuthenticated } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+  };
+
   return (
     <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e7eef3] px-10 py-3">
       <div className="flex items-center gap-4 text-[#0e151b]">
@@ -32,12 +39,35 @@ const Header = () => {
             About
           </Link>
         </div>
-        <div className="flex gap-2">
-          <button
-            className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#e7eef3] text-[#0e151b] text-sm font-bold leading-normal tracking-[0.015em]"
-          >
-            <span className="truncate">List your property</span>
-          </button>
+        <div className="flex gap-2 items-center">
+          {isAuthenticated() ? (
+            <>
+              <span className="text-sm text-gray-600 mr-2">
+                Welcome, {user?.firstName}!
+              </span>
+              <button
+                onClick={handleLogout}
+                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-red-100 text-red-700 text-sm font-bold leading-normal tracking-[0.015em] hover:bg-red-200 transition-colors"
+              >
+                <span className="truncate">Logout</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#e7eef3] text-[#0e151b] text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#d1dde6] transition-colors"
+              >
+                <span className="truncate">Login</span>
+              </Link>
+              <Link
+                to="/register"
+                className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#47a6ea] text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#3690d4] transition-colors"
+              >
+                <span className="truncate">Sign Up</span>
+              </Link>
+            </>
+          )}
           <button
             className="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 bg-[#e7eef3] text-[#0e151b] gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5"
           >
@@ -49,11 +79,13 @@ const Header = () => {
               </svg>
             </div>
           </button>
+          {isAuthenticated() && (
+            <div
+              className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
+              style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuBXgYImwlX-fFw7XhjuXj-cxJdnA_55zAVpHNf8GerRbjt8ZwjX1WtwZ9_UInMscoatL6QNuxNChM4KTs1HnGRplpI4FT-RGv2F_uz0_oPwh9U8yKC5ub82xlhzmlIBhVfFdjrx_xz63RruDOOTg1WsVf9bwN0vYHcaE_s0GK8xJytWdzqWLN46X80TZ7t-lrx8Xaf14ggSWeabegt_7iVi2iVo-ZRLRkwIPwrAsXgFPKIIHJgw97brWfNTUR-f3MUq21A1ue-dfhPy")'}}
+            ></div>
+          )}
         </div>
-        <div
-          className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
-          style={{backgroundImage: 'url("https://lh3.googleusercontent.com/aida-public/AB6AXuBXgYImwlX-fFw7XhjuXj-cxJdnA_55zAVpHNf8GerRbjt8ZwjX1WtwZ9_UInMscoatL6QNuxNChM4KTs1HnGRplpI4FT-RGv2F_uz0_oPwh9U8yKC5ub82xlhzmlIBhVfFdjrx_xz63RruDOOTg1WsVf9bwN0vYHcaE_s0GK8xJytWdzqWLN46X80TZ7t-lrx8Xaf14ggSWeabegt_7iVi2iVo-ZRLRkwIPwrAsXgFPKIIHJgw97brWfNTUR-f3MUq21A1ue-dfhPy")'}}
-        ></div>
       </div>
     </header>
   );
