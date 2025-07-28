@@ -82,17 +82,20 @@ class ApiService {
     return this.get(`${getApiEndpoint('search')}?q=${encodeURIComponent(query)}`);
   }
 
+  // endpoint 3.2
   async getHotels(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     return this.get(`${getApiEndpoint('hotels')}?${queryString}`);
   }
 
   // Make a call to our backend endpoint /hotels/:id to get hotel details
+  // endpoint 3.4
   // Then using the response, render the corresponding images on the frontend
   async getHotelById(id) {
     return this.get(`${getApiEndpoint('hotels')}/${id}`);
   }
 
+  // endpoint 3.3
   async getHotelRoomsByID(id, query) {
     const queryString = new URLSearchParams(query).toString();
     console.log("hotels/${id}/prices?${queryString}");
