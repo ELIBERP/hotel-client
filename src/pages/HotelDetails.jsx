@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import ApiService from '../services/api';
 import Map from '../components/Map';
 import SearchBar from '../components/SearchBar';
@@ -8,6 +8,7 @@ import RoomGrid from '../components/RoomGrid';
 
 const HotelDetails = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [hotel, setHotel] = useState(null);
   const [images, setImages] = useState([]);
   const [rooms, setRooms] = useState([]);
@@ -21,6 +22,10 @@ const HotelDetails = () => {
   if (selectedFilter === '2') return room.roomDescription?.toLowerCase().includes('2');
   return true;
 });
+
+  const handleBookNow = () => {
+    navigate('/booking');
+  };
 
   useEffect(() => {
     // First API call: get hotel details and images
@@ -180,6 +185,28 @@ const HotelDetails = () => {
         </div>
       )}
 
+      {/* Book Now Button */}
+      <div style={{ margin: '20px 0' }}>
+        <button
+          onClick={handleBookNow}
+          style={{
+            backgroundColor: '#47a6ea',
+            color: 'white',
+            padding: '12px 24px',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            transition: 'background-color 0.3s'
+          }}
+          onMouseOver={(e) => e.target.style.backgroundColor = '#3690d4'}
+          onMouseOut={(e) => e.target.style.backgroundColor = '#47a6ea'}
+        >
+          Book Now - {hotel.name}
+        </button>
+      </div>
+
       <h2>Static Photos</h2>
       <div style={{ display: 'flex', overflowX: 'scroll', gap: '8px' }}>
         {images.map((url, idx) => (
@@ -227,6 +254,28 @@ const HotelDetails = () => {
                 </ul>
               </div>
             )}
+
+            {/* Book Room Button */}
+            <div style={{ marginTop: '15px' }}>
+              <button
+                onClick={handleBookNow}
+                style={{
+                  backgroundColor: '#10b981',
+                  color: 'white',
+                  padding: '10px 20px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.3s'
+                }}
+                onMouseOver={(e) => e.target.style.backgroundColor = '#059669'}
+                onMouseOut={(e) => e.target.style.backgroundColor = '#10b981'}
+              >
+                Book This Room - SGD ${room.converted_price ? room.converted_price.toFixed(2) : 'N/A'}
+              </button>
+            </div>
           </div>
         ))
       ) : (

@@ -6,14 +6,20 @@ const Landing = () => {
     const navigate = useNavigate();
     
     const handleSearch = (destinationId, results, searchParams) => {
-        // more log messages for debugging
-        console.log('Searching for:', destinationId);
-        console.log('Search parameters:', searchParams);
-        console.log('Results:', results);
-
-        // Build query string for /search route
-        const params = new URLSearchParams(searchParams).toString();
-        navigate(`/search?${params}`);
+        // more log messages for debugging - COMMENTED out cuz duplicate
+        // console.log('Searching for:', destinationId);
+        // console.log('Search parameters:', searchParams);
+        // console.log('Results:', results);
+        
+        // Navigate to stays page with search results
+        // You can pass the results via state or URL params
+        navigate('/stays', { 
+            state: { 
+                searchResults: results, 
+                searchParams: searchParams,
+                hasSearched: true 
+            } 
+        });
     };
     
     return (

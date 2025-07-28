@@ -82,6 +82,7 @@ class ApiService {
     return this.get(`${getApiEndpoint('search')}?q=${encodeURIComponent(query)}`);
   }
 
+  // endpoint 3.2
   async getHotels(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     return this.get(`${getApiEndpoint('hotels')}?${queryString}`);
@@ -93,11 +94,13 @@ class ApiService {
   }
 
   // Make a call to our backend endpoint /hotels/:id to get hotel details
+  // endpoint 3.4
   // Then using the response, render the corresponding images on the frontend
   async getHotelById(id) {
     return this.get(`${getApiEndpoint('hotels')}/${id}`);
   }
 
+  // endpoint 3.3
   async getHotelRoomsByID(id, query) {
     const queryString = new URLSearchParams(query).toString();
     console.log("hotels/${id}/prices?${queryString}");
@@ -108,6 +111,60 @@ class ApiService {
 
   async createBooking(bookingData) {
     return this.post(getApiEndpoint('bookings'), bookingData);
+  }
+
+  // Authentication methods
+  async register(userData) {
+    return this.post('auth/register', userData);
+  }
+
+  async login(credentials) {
+    return this.post('auth/login', credentials);
+  }
+
+  async logout() {
+    // Clear local storage and make logout request if needed
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('authenticated');
+    return Promise.resolve();
+  }
+
+  // Check if user is authenticated
+  isAuthenticated() {
+    const user = localStorage.getItem('user');
+    return user !== null;
+  }
+
+  // Get current user
+  getCurrentUser() {
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
+  }
+
+  // Store user data after login/register
+  setUserData(userData) {
+    localStorage.setItem('user', JSON.stringify(userData.user));
+    // Only store token if it exists (backend doesn't currently send tokens)
+    if (userData.token) {
+      localStorage.setItem('token', userData.token);
+    } else {
+      // Store a simple flag to indicate authenticated session
+      localStorage.setItem('authenticated', 'true');
+    }
+  }
+
+  // Payment methods
+  async createCheckoutSession(bookingData) {
+    return this.post('/api/payment/create-checkout-session', bookingData);
+  }
+
+  async getBookingDetails(sessionId) {
+    return this.get(`/api/payment/booking-details/${sessionId}`);
+  }
+
+  async updateBookingStatus(bookingId, status) {
+    return this.put(`${getApiEndpoint('bookings')}/${bookingId}/status`, { status });
   }
 }
 
