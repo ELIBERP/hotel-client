@@ -88,6 +88,11 @@ class ApiService {
     return this.get(`${getApiEndpoint('hotels')}?${queryString}`);
   }
 
+  async getHotelsPrice(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return this.get(`${getApiEndpoint('hotels')}/prices?${queryString}`);
+  }
+
   // Make a call to our backend endpoint /hotels/:id to get hotel details
   // endpoint 3.4
   // Then using the response, render the corresponding images on the frontend
@@ -101,6 +106,8 @@ class ApiService {
     console.log("hotels/${id}/prices?${queryString}");
     return this.get(`${getApiEndpoint('hotels')}/${id}/prices?${queryString}`);
   }
+
+  
 
   async createBooking(bookingData) {
     return this.post(getApiEndpoint('bookings'), bookingData);

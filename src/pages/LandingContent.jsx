@@ -13,13 +13,15 @@ const Landing = () => {
         
         // Navigate to stays page with search results
         // You can pass the results via state or URL params
-        navigate('/stays', { 
-            state: { 
-                searchResults: results, 
-                searchParams: searchParams,
-                hasSearched: true 
-            } 
-        });
+        // navigate('/stays', { 
+        //     state: { 
+        //         searchResults: results, 
+        //         searchParams: searchParams,
+        //         hasSearched: true 
+        //     } 
+        // });
+        const params = new URLSearchParams(searchParams).toString();
+        navigate(`/search?${params}`);
     };
     
     return (
