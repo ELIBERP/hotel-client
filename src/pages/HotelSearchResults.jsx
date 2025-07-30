@@ -64,7 +64,14 @@ const HotelSearchResults = () => {
           landing_page: 'wl-acme-earn',
           product_type: 'earn'
         };
-        const priceData = await ApiService.getHotelsPrice(priceQuery);
+        // const priceData = await ApiService.getHotelsPrice(priceQuery);
+        let priceData = await ApiService.getHotelsPrice(priceQuery);
+        let pollCount = 0;
+        while (priceData && priceData.completed !== true && pollCount < 20) {
+          await new Promise(res => setTimeout(res, 1000));
+          priceData = await ApiService.getHotelsPrice(priceQuery);
+          pollCount++;
+        }
         setPrices(priceData.hotels || []);
       } catch (err) {
         console.error('Failed to fetch hotels:', err);
