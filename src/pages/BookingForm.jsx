@@ -68,7 +68,7 @@ const BookingForm = () => {
     setIsSubmitting(true);
     try {
       // Call your booking API to store guest information
-      const bookingResponse = await fetch('http://localhost:3000/api/bookings', {
+      const bookingResponse = await fetch(buildApiUrl('/api/bookings'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
