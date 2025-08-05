@@ -9,13 +9,38 @@ class ApiService {
     this.timeout = config.apiTimeout;
   }
 
-  // Generic request method with timeout and better error handling
+  // Get JWT token from localStorage
+  getAuthToken() {
+    return localStorage.getItem('authToken');
+  }
+
+  // Set JWT token in localStorage
+  setAuthToken(token) {
+    localStorage.setItem('authToken', token);
+  }
+
+  // Remove JWT token from localStorage
+  removeAuthToken() {
+    localStorage.removeItem('authToken');
+  }
+
+  // Check if user is authenticated
+  isAuthenticated() {
+    return !!this.getAuthToken();
+  }
+
+  // Generic request method with timeout, JWT auth, and better error handling
   async request(endpoint, options = {}) {
     const url = buildApiUrl(endpoint);
+    
+    // Add JWT token to headers if available
+    const authToken = this.getAuthToken();
+    const authHeaders = authToken ? { 'Authorization': `Bearer ${authToken}` } : {};
     
     const defaultOptions = {
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
         ...options.headers,
       },
       signal: AbortSignal.timeout(this.timeout), // Built-in timeout
@@ -135,12 +160,134 @@ class ApiService {
   // Store user data after login/register
   setUserData(userData) {
     localStorage.setItem('user', JSON.stringify(userData.user));
-    // Only store token if it exists (backend doesn't currently send tokens)
+    // Store JWT token if it exists
     if (userData.token) {
-      localStorage.setItem('token', userData.token);
-    } else {
-      // Store a simple flag to indicate authenticated session
-      localStorage.setItem('authenticated', 'true');
+      this.setAuthToken(userData.token);
+    }
+  }
+
+  // Authentication methods
+  async login(email, password) {
+    try {
+      const response = await this.request('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.success && response.token) {
+        this.setAuthToken(response.token);
+        this.setUserData(response);
+        return response;
+      } else {
+        throw new Error(response.message || 'Login failed');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  }
+
+  async register(userData) {
+    try {
+      const response = await this.request('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(userData),
+      });
+
+      if (response.success) {
+        return response;
+      } else {
+        throw new Error(response.message || 'Registration failed');
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
+    }
+  }
+
+  // Logout user
+  logout() {
+    this.removeAuthToken();
+    localStorage.removeItem('user');
+    localStorage.removeItem('authenticated');
+  }
+
+  // Booking methods (Protected routes - require JWT authentication)
+  async createBooking(bookingData) {
+    try {
+      if (!this.isAuthenticated()) {
+        throw new Error('Please login to create a booking');
+      }
+
+      const response = await this.request('/bookings', {
+        method: 'POST',
+        body: JSON.stringify({
+          hotelId: bookingData.hotelId || 'hotel-default',
+          checkIn: bookingData.checkInDate,
+          checkOut: bookingData.checkOutDate,
+          guests: bookingData.numberOfGuests,
+          roomType: bookingData.roomType,
+          totalPrice: bookingData.totalAmount,
+          guestInfo: {
+            firstName: bookingData.firstName,
+            lastName: bookingData.lastName,
+            email: bookingData.email,
+            phone: bookingData.phoneNumber,
+            specialRequests: bookingData.specialRequests
+          }
+        }),
+      });
+
+      if (response.success) {
+        return response;
+      } else {
+        throw new Error(response.message || 'Failed to create booking');
+      }
+    } catch (error) {
+      console.error('Create booking error:', error);
+      throw error;
+    }
+  }
+
+  async getUserBookings() {
+    try {
+      if (!this.isAuthenticated()) {
+        throw new Error('Please login to view bookings');
+      }
+
+      const response = await this.request('/bookings', {
+        method: 'GET',
+      });
+
+      if (response.success) {
+        return response;
+      } else {
+        throw new Error(response.message || 'Failed to fetch bookings');
+      }
+    } catch (error) {
+      console.error('Get bookings error:', error);
+      throw error;
+    }
+  }
+
+  async cancelBooking(bookingId) {
+    try {
+      if (!this.isAuthenticated()) {
+        throw new Error('Please login to cancel booking');
+      }
+
+      const response = await this.request(`/bookings/${bookingId}/cancel`, {
+        method: 'PUT',
+      });
+
+      if (response.success) {
+        return response;
+      } else {
+        throw new Error(response.message || 'Failed to cancel booking');
+      }
+    } catch (error) {
+      console.error('Cancel booking error:', error);
+      throw error;
     }
   }
 

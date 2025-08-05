@@ -1,9 +1,13 @@
 // pages/BookingForm.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import PaymentButton from '../components/PaymentButton';
 import { validateBookingData, formatCurrency } from '../utils/pricing';
+import ApiService from '../services/api';
 
 const BookingForm = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [step, setStep] = useState(1); // 1: Guest Info, 2: Review & Payment
   const [formData, setFormData] = useState({
     // Guest Information
@@ -29,6 +33,47 @@ const BookingForm = () => {
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [authenticationRequired, setAuthenticationRequired] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Check authentication status on component mount and when location changes
+  useEffect(() => {
+    const checkAuthStatus = () => {
+      const user = ApiService.getCurrentUser();
+      const isAuthenticated = ApiService.isAuthenticated();
+      
+      if (isAuthenticated && user) {
+        setCurrentUser(user);
+        setAuthenticationRequired(false);
+        // Pre-fill form with user data if available
+        setFormData(prev => ({
+          ...prev,
+          firstName: user.firstName || prev.firstName,
+          lastName: user.lastName || prev.lastName,
+          email: user.email || prev.email
+        }));
+      } else {
+        setCurrentUser(null);
+        setAuthenticationRequired(true);
+      }
+    };
+
+    // Check on mount and location change
+    checkAuthStatus();
+
+    // Also check when window gains focus (user returns from login)
+    const handleFocus = () => checkAuthStatus();
+    window.addEventListener('focus', handleFocus);
+
+    // Listen for storage changes (if user logs in/out in another tab)
+    const handleStorageChange = () => checkAuthStatus();
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [location.pathname]); // Add location.pathname as dependency to refresh when user returns
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -67,43 +112,36 @@ const BookingForm = () => {
   const handleCreateBooking = async () => {
     setIsSubmitting(true);
     try {
-      // Call your booking API to store guest information
-      const bookingResponse = await fetch(buildApiUrl('/api/bookings'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          bookingId: formData.bookingId,
-          guestInfo: {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            email: formData.email,
-            phoneNumber: formData.phoneNumber,
-            specialRequests: formData.specialRequests
-          },
-          bookingDetails: {
-            hotelName: formData.hotelName,
-            roomType: formData.roomType,
-            checkInDate: formData.checkInDate,
-            checkOutDate: formData.checkOutDate,
-            numberOfGuests: formData.numberOfGuests,
-            numberOfNights: formData.numberOfNights,
-            totalAmount: formData.totalAmount
-          },
-          status: 'pending_payment'
-        })
-      });
-
-      if (!bookingResponse.ok) {
-        throw new Error('Failed to create booking');
+      // Check if user is authenticated
+      if (!ApiService.isAuthenticated()) {
+        alert('Please login to create a booking. Redirecting to login page...');
+        navigate('/login', { state: { from: location } });
+        return;
       }
 
-      console.log('✅ Booking created successfully');
-      // The PaymentButton will handle the payment process
+      // Call your JWT-protected booking API
+      console.log('Creating booking with JWT authentication...');
+      const bookingResponse = await ApiService.createBooking(formData);
+
+      if (bookingResponse.success) {
+        console.log('✅ Booking created successfully:', bookingResponse.booking);
+        alert(`Booking created successfully! Booking ID: ${bookingResponse.booking.id}`);
+        
+        // Optionally redirect to booking details or continue with payment
+        // navigate(`/booking-success/${bookingResponse.booking.id}`);
+      } else {
+        throw new Error(bookingResponse.message || 'Failed to create booking');
+      }
+
     } catch (error) {
       console.error('❌ Error creating booking:', error);
-      alert('Failed to create booking. Please try again.');
+      
+      if (error.message.includes('login') || error.message.includes('401')) {
+        alert('Your session has expired. Please login again.');
+        navigate('/login', { state: { from: location } });
+      } else {
+        alert(`Failed to create booking: ${error.message}`);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -111,8 +149,63 @@ const BookingForm = () => {
 
   const renderGuestInfoStep = () => (
     <div className="space-y-6">
+      {/* Authentication Warning */}
+      {authenticationRequired && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-5 h-5 text-yellow-400">⚠️</div>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-yellow-800">
+                Authentication Required
+              </h3>
+              <p className="mt-1 text-sm text-yellow-700">
+                You need to be logged in to create a booking. 
+                <button 
+                  onClick={() => navigate('/login', { state: { from: location } })}
+                  className="font-medium underline hover:text-yellow-900 ml-1"
+                >
+                  Click here to login
+                </button>
+                or continue as guest (you'll be asked to login before payment).
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User Info Display */}
+      {currentUser && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-5 h-5 text-green-400">✅</div>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-green-800">
+                Logged in as {currentUser.firstName} {currentUser.lastName}
+              </h3>
+              <p className="mt-1 text-sm text-green-700">
+                Your booking will be saved to your account.
+                <button 
+                  onClick={() => {
+                    ApiService.logout();
+                    setCurrentUser(null);
+                    setAuthenticationRequired(true);
+                  }}
+                  className="font-medium underline hover:text-green-900 ml-2"
+                >
+                  Logout
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-blue-50 rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-4 text-blue-800">📋 Guest Information</h2>
+        <h2 className="text-xl font-semibold mb-4 text-blue-800">Guest Information</h2>
         <p className="text-blue-600">Please provide your details for the booking</p>
       </div>
 
@@ -250,7 +343,7 @@ const BookingForm = () => {
 
       {/* Price Summary */}
       <div className="bg-gray-50 rounded-lg p-6">
-        <h3 className="text-lg font-semibold mb-4">💰 Payment Summary</h3>
+        <h3 className="text-lg font-semibold mb-4">Payment Summary</h3>
         <div className="space-y-2">
           <div className="flex justify-between text-lg">
             <span>Room Rate ({formData.numberOfNights} nights)</span>
@@ -270,22 +363,39 @@ const BookingForm = () => {
 
       {/* Payment Section */}
       <div className="bg-yellow-50 rounded-lg p-6">
-        <h3 className="text-lg font-semibold mb-3 text-yellow-800">💳 Payment</h3>
+        <h3 className="text-lg font-semibold mb-3 text-yellow-800">Payment</h3>
         <p className="text-yellow-700 mb-4">
           Click "Proceed to Payment" to complete your booking securely with Stripe.
           You'll be redirected to a secure payment page.
         </p>
         
         <div className="space-y-4">
-          <PaymentButton 
-            bookingData={formData} 
-            isSubmitting={isSubmitting}
-            onBeforePayment={handleCreateBooking}
-          />
-          
-          <p className="text-xs text-gray-500 text-center">
-            🔒 Your payment is secured by Stripe. No card details are stored on our servers.
-          </p>
+          {!ApiService.isAuthenticated() ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+              <h4 className="text-red-800 font-semibold mb-2">⚠️ Login Required</h4>
+              <p className="text-red-700 text-sm mb-3">
+                You must be logged in to create a booking. Your booking will be saved to your account.
+              </p>
+              <button
+                onClick={() => navigate('/login', { state: { from: location } })}
+                className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+              >
+                Login to Continue
+              </button>
+            </div>
+          ) : (
+            <>
+              <PaymentButton 
+                bookingData={formData} 
+                isSubmitting={isSubmitting}
+                onBeforePayment={handleCreateBooking}
+              />
+              
+              <p className="text-xs text-gray-500 text-center">
+                🔒 Your payment is secured by Stripe. No card details are stored on our servers.
+              </p>
+            </>
+          )}
         </div>
       </div>
 
@@ -308,7 +418,7 @@ const BookingForm = () => {
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              🏨 Complete Your Booking
+              Complete Your Booking
             </h1>
             <div className="flex justify-center items-center space-x-4 mb-4">
               <div className={`flex items-center ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
