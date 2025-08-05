@@ -1,30 +1,73 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import ApiService from '../services/api';
 import Map from '../components/Map';
 import SearchBar from '../components/SearchBar';
 import RoomGrid from '../components/RoomGrid';
 
-
 const HotelDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [hotel, setHotel] = useState(null);
   const [images, setImages] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
-  const [showDescriptionModal, setShowDescriptionModal] = useState(false); // for description popup, need improve later (overflows)
-  //const [showMap, setShowMap] = useState(false); // for google map popup
+  const [showDescriptionModal, setShowDescriptionModal] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [hotelDetails, setHotelDetails] = useState({
+    name: '',
+    room: '',
+    checkIn: '',
+    checkOut: '',
+    guests: '',
+    nights: 0,
+    price: 0,
+  });
+
+  // Get query parameters from the URL
+  const queryParams = new URLSearchParams(location.search);
+  const destination_id = queryParams.get('destination_id');
+  const checkin = queryParams.get('checkin');
+  const checkout = queryParams.get('checkout');
+  const guests = queryParams.get('guests');
+  const currency = queryParams.get('currency');
+  const country_code = queryParams.get('country_code');
+  const lang = queryParams.get('lang');
+
+  // Validate required query parameters
+  if (!destination_id || !checkin || !checkout || !guests || !currency || !country_code || !lang) {
+    return <div>Error: Missing required query parameters</div>;
+  }
+
   const filteredRooms = rooms.filter(room => {
-  if (selectedFilter === 'all') return true;
-  if (selectedFilter === '1') return room.roomDescription?.toLowerCase().includes('1');
-  if (selectedFilter === '2') return room.roomDescription?.toLowerCase().includes('2');
-  return true;
-});
+    if (selectedFilter === 'all') return true;
+    if (selectedFilter === '1') return room.roomDescription?.toLowerCase().includes('1');
+    if (selectedFilter === '2') return room.roomDescription?.toLowerCase().includes('2');
+    return true;
+  });
+
+  // Update hotelDetails object based on the first room in rooms
+  useEffect(() => {
+    if (rooms.length > 0) {
+      const firstRoom = rooms[0]; // Get the first room
+      const nights = Math.ceil((new Date(checkout) - new Date(checkin)) / (1000 * 3600 * 24)); // Calculate number of nights
+
+      setHotelDetails({
+        name: hotel?.name || '',
+        room: firstRoom.roomDescription, // Set room to the first room
+        checkIn: checkin,
+        checkOut: checkout,
+        guests: guests,
+        nights: nights,
+        price: firstRoom.converted_price || 500, // Assuming price comes from first room
+      });
+    }
+  }, [rooms, hotel, checkin, checkout, guests]);
 
   const handleBookNow = () => {
-    navigate('/booking');
+    // Pass hotelDetails to the booking page
+    navigate('/booking', { state: { hotelDetails } });
   };
 
   useEffect(() => {
@@ -33,7 +76,7 @@ const HotelDetails = () => {
       .then((data) => {
         setHotel(data);
 
-        const { prefix, suffix } =  data.image_details;
+        const { prefix, suffix } = data.image_details;
         const indices = data.hires_image_index
           .split(',')
           .map((str) => str.trim())
@@ -44,16 +87,16 @@ const HotelDetails = () => {
       })
       .catch((err) => console.error(err));
 
-    // Second API call: get hotel rooms
+    // Second API call: get hotel rooms with dynamic query
     const query = {
-      destination_id: 'diH7',
-      checkin: '2025-10-10',
-      checkout: '2025-10-17',
-      guests: 2,
-      currency: 'SGD',
-      country_code: 'SG',
-      lang: 'en_US',
-      partner_id: 1
+      destination_id,
+      checkin,
+      checkout,
+      guests,
+      currency,
+      country_code,
+      lang,
+      partner_id: 1, // Static partner_id
     };
 
     ApiService.getHotelRoomsByID(id, query)
@@ -65,20 +108,18 @@ const HotelDetails = () => {
         setLoadingRooms(false);
       });
 
-  }, [id]);
+  }, [id, destination_id, checkin, checkout, guests, currency, country_code, lang]);
 
   if (!hotel) return <div>Loading hotel details...</div>;
 
   return (
-    
     <div>
-       
       <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-6">
         <div className="w-full border-b border-gray-200 bg-white mb-6">
           <div className="w-full px-6 sm:px-16 py-4 bg-[#f2f2f4] rounded-xl shadow-sm">
             <SearchBar
               placeholder="Paris, France"
-              size="hotelDetailPage" 
+              size="hotelDetailPage"
               className="w-full max-w-screen-xl mx-auto"
               onSearch={(query, results) => {
                 console.log("Hotel details search triggered:", query, results);
@@ -88,13 +129,11 @@ const HotelDetails = () => {
         </div>
         <h1 className="text-2xl font-bold text-[#0e151b] mb-6">{hotel.name}</h1>
         <div className="flex flex-col md:flex-row gap-8 mb-6">
-
           <img
             src={images[0]}
             alt="Main Hotel View"
             className="rounded-xl w-full md:w-[600px] h-[350px] object-cover"
           />
-
           <div className="flex flex-col justify-start md:w-1/2">
             <h2 className="text-xl font-semibold text-[#0e151b] mb-2">About this place</h2>
             <a href="#" className="text-sm text-[#1a73e8] underline mb-2">📍 {hotel.address} </a>
@@ -111,11 +150,11 @@ const HotelDetails = () => {
         </div>
         <div className="flex gap-4 overflow-x-auto py-4">
           {images.map((url, idx) => (
-            <img 
-              key={idx} 
-              src={url} 
-              alt={`Hotel image ${idx + 1}`} 
-              className="w-48 h-32 object-cover rounded-xl flex-shrink-0" 
+            <img
+              key={idx}
+              src={url}
+              alt={`Hotel image ${idx + 1}`}
+              className="w-48 h-32 object-cover rounded-xl flex-shrink-0"
             />
           ))}
         </div>
@@ -139,11 +178,8 @@ const HotelDetails = () => {
         </div>
       )}
 
-
-
-
-
       <Map coordinates={{ lat: hotel.latitude, lng: hotel.longitude }} />
+
       <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-10">
         <h2 className="text-2xl font-bold text-[#0e151b] mb-4">Choose your room</h2>
 
@@ -153,8 +189,8 @@ const HotelDetails = () => {
             <button
               key={type}
               onClick={() => setSelectedFilter(type)}
-              className={`px-4 py-2 rounded-full border 
-                ${selectedFilter === type ? 'bg-black text-white' : 'bg-gray-100 text-black'} 
+              className={`px-4 py-2 rounded-full border
+                ${selectedFilter === type ? 'bg-black text-white' : 'bg-gray-100 text-black'}
                 hover:bg-gray-200 transition`}
             >
               {type === 'all' ? 'All rooms' : `${type} Bed`}
@@ -165,25 +201,6 @@ const HotelDetails = () => {
         {/* Grid of Room Cards */}
         <RoomGrid rooms={filteredRooms} loading={loadingRooms} />
       </div>
-
-
-
-
-      {/* Skeleton code for reference */}
-      <h1>Name: {hotel.name}</h1>
-      <p><strong>Address:</strong> {hotel.address}</p>
-      <p><strong>Rating:</strong> {hotel.rating ? hotel.rating : 'N/A'}</p>
-      <p><strong>Description:</strong> {hotel.description ? hotel.description : 'No description available.'}</p>
-      {hotel.amenities && hotel.amenities.length > 0 && (
-        <div>
-          <strong>Amenities:</strong>
-          <ul>
-            {hotel.amenities.map((amenity, idx) => (
-              <li key={idx}>{amenity}</li>
-            ))}
-          </ul>
-        </div>
-      )}
 
       {/* Book Now Button */}
       <div style={{ margin: '20px 0' }}>
@@ -203,84 +220,9 @@ const HotelDetails = () => {
           onMouseOver={(e) => e.target.style.backgroundColor = '#3690d4'}
           onMouseOut={(e) => e.target.style.backgroundColor = '#47a6ea'}
         >
-          Book Now - {hotel.name}
+          Book Now - {hotelDetails.name}
         </button>
       </div>
-
-      <h2>Static Photos</h2>
-      <div style={{ display: 'flex', overflowX: 'scroll', gap: '8px' }}>
-        {images.map((url, idx) => (
-          <img key={idx} src={url} alt={`Hotel image ${idx}`} width={200} />
-        ))}
-      </div>
-
-      <br />
-
-      <h1>Available Rooms</h1>
-      {loadingRooms ? (
-        <p>Loading room details...</p>
-      ) : rooms.length > 0 ? (
-        rooms.map((room, idx) => (
-          <div key={idx} style={{ marginBottom: '24px', border: '1px solid #ddd', padding: '12px', borderRadius: '8px' }}>
-            <h3>{room.roomDescription}</h3>
-
-            <div style={{ display: 'flex', overflowX: 'scroll', gap: '8px' }}>
-              {room.images && room.images.map((img, imgIdx) => (
-                <img
-                  key={imgIdx}
-                  src={img.high_resolution_url || img.url}
-                  alt={`Room ${idx} image ${imgIdx}`}
-                  width={200}
-                />
-              ))}
-            </div>
-
-            <div style={{ marginTop: '10px' }}>
-              <strong>Price (SGD):</strong> {room.converted_price ? room.converted_price.toFixed(2) : 'N/A'}
-            </div>
-
-            <div style={{ marginTop: '10px' }}>
-              <strong>Long Description:</strong>
-              <div dangerouslySetInnerHTML={{ __html: room.long_description }} />
-            </div>
-
-            {room.amenities && room.amenities.length > 0 && (
-              <div style={{ marginTop: '10px' }}>
-                <strong>Amenities:</strong>
-                <ul>
-                  {room.amenities.map((amenity, aIdx) => (
-                    <li key={aIdx}>{amenity}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Book Room Button */}
-            <div style={{ marginTop: '15px' }}>
-              <button
-                onClick={handleBookNow}
-                style={{
-                  backgroundColor: '#10b981',
-                  color: 'white',
-                  padding: '10px 20px',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.3s'
-                }}
-                onMouseOver={(e) => e.target.style.backgroundColor = '#059669'}
-                onMouseOut={(e) => e.target.style.backgroundColor = '#10b981'}
-              >
-                Book This Room - SGD ${room.converted_price ? room.converted_price.toFixed(2) : 'N/A'}
-              </button>
-            </div>
-          </div>
-        ))
-      ) : (
-        <p>No rooms available for selected dates.</p>
-      )}
     </div>
   );
 };
