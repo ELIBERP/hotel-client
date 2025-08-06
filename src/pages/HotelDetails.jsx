@@ -13,6 +13,8 @@ const HotelDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const nearbyHotels = location.state?.nearbyHotels || [];
+  console.log("Nearby hotels received:", nearbyHotels);
   const mapModalRef = useRef(null);
   const descModalRef = useRef(null);
   const [hotel, setHotel] = useState(null);
@@ -41,7 +43,8 @@ const HotelDetails = () => {
   const checkout = queryParams.get('checkout');
   const guests = queryParams.get('guests');
   const currency = queryParams.get('currency');
-  const country_code = queryParams.get('country_code');
+  //const country_code = queryParams.get('country_code');
+  const country_code = 'SG';
   const lang = queryParams.get('lang');
 
   // Validate required query parameters
@@ -74,6 +77,13 @@ const HotelDetails = () => {
   useOutsideClick(mapModalRef, () => setShowMapModal(false)); // Google map popup
   useOutsideClick(descModalRef, () => setShowDescriptionModal(false)); // Hotel Desc popup
   useOutsideClick(roomModalRef, () => setSelectedRoom(null)); // Room Detail popup
+
+
+  // for page refresh when choosing another hotel under recommendation
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
+
 
   // Update hotelDetails object based on the first room in rooms
   useEffect(() => {
@@ -261,27 +271,6 @@ const HotelDetails = () => {
           />
         </div>
 
-        {/* Book Now Button */}
-        <div style={{ margin: '20px 0' }}>
-          <button
-            onClick={handleBookNow}
-            style={{
-              backgroundColor: '#47a6ea',
-              color: 'white',
-              padding: '12px 24px',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              transition: 'background-color 0.3s'
-            }}
-            onMouseOver={(e) => e.target.style.backgroundColor = '#3690d4'}
-            onMouseOut={(e) => e.target.style.backgroundColor = '#47a6ea'}
-          >
-            Book Now - {hotelDetails.name}
-          </button>
-        </div>
 
 
         {showMapModal && (
@@ -391,6 +380,48 @@ const HotelDetails = () => {
         </div>
       )}
       </div>
+      {nearbyHotels.length > 1 && (
+      <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-10">
+        <h2 className="text-2xl font-bold text-[#0e151b] mb-4">Other Hotels You Might Like</h2>
+        <div className="flex overflow-x-auto gap-4 [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {nearbyHotels
+            .filter(h => String(h.id) !== String(id)) // Exclude the current hotel
+            .slice(0, 3) // Limit to 3 hotels
+            .map(hotel => {
+              const imageUrl = hotel.image_details?.prefix && hotel.hires_image_index
+                ? `${hotel.image_details.prefix}${hotel.hires_image_index.split(',')[0].trim()}${hotel.image_details.suffix}`
+                : 'https://dummyimage.com/400x300/cccccc/000000&text=No+Image';
+
+              return (
+                <div
+                  key={hotel.id}
+                  onClick={() =>
+                    navigate(`/hotels/${hotel.id}${location.search}`, {
+                      state: { nearbyHotels },
+                    })
+                  }
+                  className="cursor-pointer flex flex-col gap-2 min-w-[220px] rounded-lg shadow-md bg-white hover:shadow-lg transition-shadow duration-200"
+                >
+                  <div
+                    className="w-full aspect-video bg-cover bg-center rounded-t-lg"
+                    style={{ backgroundImage: `url(${imageUrl})` }}
+                  />
+                  <div className="p-4">
+                    <p className="text-[#111518] font-medium text-base hover:underline">
+                      {hotel.name}
+                    </p>
+                    <p className="text-[#637888] text-sm">
+                      From ${hotel.price || '—'} · Rating: {hotel.rating || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+              );
+            })}
+        </div>
+      </div>
+    )}
+
     </LoadScript>
   );
 };
