@@ -1,7 +1,7 @@
 // components/RoomGrid.jsx
 import React from 'react';
 
-const RoomGrid = ({ rooms, loading }) => {
+const RoomGrid = ({ rooms, loading, onRoomClick }) => {
   if (loading) return <p>Loading room details...</p>;
 
   if (rooms.length === 0) {
@@ -24,7 +24,10 @@ const RoomGrid = ({ rooms, loading }) => {
             <p className="text-sm text-gray-600 mb-3">
               bedsize · roomsize · optional detail
             </p>
-            <button className="px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200 text-sm font-medium">
+            <button 
+              onClick={() => onRoomClick(room)} 
+              className="px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200 text-sm font-medium"
+            >
               View Details
             </button>
           </div>

@@ -17,6 +17,8 @@ const HotelDetails = () => {
   const descModalRef = useRef(null);
   const [hotel, setHotel] = useState(null);
   const [images, setImages] = useState([]);
+  const roomModalRef = useRef(null);
+  const [selectedRoom, setSelectedRoom] = useState(null); // for the room modal
   const [rooms, setRooms] = useState([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [showDescriptionModal, setShowDescriptionModal] = useState(false);
@@ -55,9 +57,10 @@ const HotelDetails = () => {
   });
 
   // Outside Click
-  useOutsideClick(mapModalRef, () => setShowMapModal(false)); //ref={descModalRef} add this line to detect clicks 
-  useOutsideClick(descModalRef, () => setShowDescriptionModal(false)); // outside the box for implementation of useOutsideClick
-
+  //ref={descModalRef} add this line to detect clicks outside the box for implementation of useOutsideClick
+  useOutsideClick(mapModalRef, () => setShowMapModal(false)); // Google map popup
+  useOutsideClick(descModalRef, () => setShowDescriptionModal(false)); // Hotel Desc popup
+  useOutsideClick(roomModalRef, () => setSelectedRoom(null)); // Room Detail popup
 
   // Update hotelDetails object based on the first room in rooms
   useEffect(() => {
@@ -77,7 +80,20 @@ const HotelDetails = () => {
     }
   }, [rooms, hotel, checkin, checkout, guests]); // for room grid , the button only brings to first room
 
+  const handleBookSelectedRoom = (room) => {
+    const nights = Math.ceil((new Date(checkout) - new Date(checkin)) / (1000 * 3600 * 24));
+    const selectedDetails = {
+      name: hotel?.name || '',
+      room: room.roomDescription,
+      checkIn: checkin,
+      checkOut: checkout,
+      guests: guests,
+      nights: nights,
+      price: room.converted_price || 500,
+    };
 
+    navigate('/booking', { state: { hotelDetails: selectedDetails } });
+  };
   
   const handleBookNow = () => {
     // Pass hotelDetails to the booking page
@@ -224,7 +240,11 @@ const HotelDetails = () => {
           </div>
 
           {/* Grid of Room Cards */}
-          <RoomGrid rooms={filteredRooms} loading={loadingRooms} />
+          <RoomGrid 
+            rooms={filteredRooms} 
+            loading={loadingRooms} 
+            onRoomClick={(room) => setSelectedRoom(room)}/
+          >
         </div>
 
         {/* Book Now Button */}
@@ -269,7 +289,85 @@ const HotelDetails = () => {
           </div>
         </div>
       )}
+      {selectedRoom && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div
+            ref={roomModalRef}
+            className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 overflow-y-auto max-h-[90vh]"
+          >
+            <h2 className="text-xl font-semibold mb-3">{selectedRoom.roomDescription}</h2>
 
+            <img
+              src={
+                selectedRoom.images?.[0]?.high_resolution_url ||
+                selectedRoom.images?.[0]?.url
+              }
+              alt="Room Preview"
+              className="w-full h-56 object-cover rounded mb-4"
+            />
+
+            {/* Long Description */}
+            <div
+              className="text-sm text-gray-700 space-y-2 mb-6"
+              dangerouslySetInnerHTML={{ __html: selectedRoom.long_description }}
+            />
+
+            {/* Price */}
+            <p className="text-sm mb-2">
+              <strong>Price:</strong> {selectedRoom.converted_price} {currency}
+            </p>
+
+            {/* Breakfast Info */}
+            <p className="text-sm mb-4">
+              <strong>Breakfast:</strong>{' '}
+              {selectedRoom.roomAdditionalInfo?.breakfastInfo === 'hotel_detail_room_only'
+                ? 'Not included'
+                : selectedRoom.roomAdditionalInfo?.breakfastInfo || '—'}
+            </p>
+
+            {/* Optional Display Fields (Safe) */}
+            {selectedRoom.roomAdditionalInfo?.displayFields?.fees_optional && (
+              <div className="mb-4">
+                <h3 className="font-semibold text-sm mb-1">Optional Fees:</h3>
+                <div
+                  className="text-sm text-gray-600"
+                  dangerouslySetInnerHTML={{
+                    __html: selectedRoom.roomAdditionalInfo.displayFields.fees_optional,
+                  }}
+                />
+              </div>
+            )}
+
+            {selectedRoom.roomAdditionalInfo?.displayFields?.know_before_you_go && (
+              <div className="mb-4">
+                <h3 className="font-semibold text-sm mb-1">Know Before You Go:</h3>
+                <div
+                  className="text-sm text-gray-600"
+                  dangerouslySetInnerHTML={{
+                    __html: selectedRoom.roomAdditionalInfo.displayFields.know_before_you_go,
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Buttons */}
+            <div className="flex justify-end gap-4 mt-4">
+              <button
+                onClick={() => setSelectedRoom(null)}
+                className="text-sm text-[#1a73e8] underline"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => handleBookSelectedRoom(selectedRoom)}
+                className="px-4 py-2 bg-blue-500 text-white rounded font-semibold text-sm hover:bg-blue-600"
+              >
+                Book Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </LoadScript>
   );
