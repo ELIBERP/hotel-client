@@ -295,7 +295,15 @@ const HotelDetails = () => {
             ref={roomModalRef}
             className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 overflow-y-auto max-h-[90vh]"
           >
-            <h2 className="text-xl font-semibold mb-3">{selectedRoom.roomDescription}</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">{selectedRoom.roomDescription}</h2>
+              <button
+                onClick={() => handleBookSelectedRoom(selectedRoom)}
+                className="px-4 py-2 bg-blue-500 text-white rounded text-sm font-semibold hover:bg-blue-600"
+              >
+                Book Now
+              </button>
+            </div>
 
             <img
               src={
