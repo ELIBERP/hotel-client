@@ -55,8 +55,8 @@ const HotelDetails = () => {
   });
 
   // Outside Click
-  useOutsideClick(mapModalRef, () => setShowMapModal(false));
-  useOutsideClick(descModalRef, () => setShowDescriptionModal(false));
+  useOutsideClick(mapModalRef, () => setShowMapModal(false)); //ref={descModalRef} add this line to detect clicks 
+  useOutsideClick(descModalRef, () => setShowDescriptionModal(false)); // outside the box for implementation of useOutsideClick
 
 
   // Update hotelDetails object based on the first room in rooms
