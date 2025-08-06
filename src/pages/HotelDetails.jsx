@@ -49,10 +49,23 @@ const HotelDetails = () => {
     return <div>Error: Missing required query parameters</div>;
   }
 
-  const filteredRooms = rooms.filter(room => {
+  const extractBedCount = (long_description) => { // to filter by bed count, we extract bed count from long desc
+    if (!long_description) return 0;
+    const div = document.createElement('div');
+    div.innerHTML = long_description;
+    const firstP = div.querySelector('p')?.textContent || '';
+    const match = firstP.match(/(\d+)/); // matches "1", "2", etc.
+    return match ? parseInt(match[1], 10) : 0;
+  };
+
+
+
+  const filteredRooms = rooms.filter((room) => {
+    const bedCount = extractBedCount(room.long_description);
     if (selectedFilter === 'all') return true;
-    if (selectedFilter === '1') return room.roomDescription?.toLowerCase().includes('1');
-    if (selectedFilter === '2') return room.roomDescription?.toLowerCase().includes('2');
+    if (selectedFilter === '1') return bedCount === 1;
+    if (selectedFilter === '2') return bedCount === 2;  
+
     return true;
   });
 
@@ -79,6 +92,7 @@ const HotelDetails = () => {
       });
     }
   }, [rooms, hotel, checkin, checkout, guests]); // for room grid , the button only brings to first room
+
 
   const handleBookSelectedRoom = (room) => {
     const nights = Math.ceil((new Date(checkout) - new Date(checkin)) / (1000 * 3600 * 24));
@@ -226,7 +240,7 @@ const HotelDetails = () => {
 
           {/* Filter Buttons */}
           <div className="flex gap-4 mb-6">
-            {['all', '2', '1'].map((type) => (
+            {['all', '1', '2'].map((type) => (
               <button
                 key={type}
                 onClick={() => setSelectedFilter(type)}
@@ -234,7 +248,7 @@ const HotelDetails = () => {
                   ${selectedFilter === type ? 'bg-black text-white' : 'bg-gray-100 text-black'}
                   hover:bg-gray-200 transition`}
               >
-                {type === 'all' ? 'All rooms' : `${type} Bed`}
+                {type === 'all' ? 'All Rooms' : `${type} Bed${type !== '1' ? 's' : ''}`}
               </button>
             ))}
           </div>
@@ -243,8 +257,8 @@ const HotelDetails = () => {
           <RoomGrid 
             rooms={filteredRooms} 
             loading={loadingRooms} 
-            onRoomClick={(room) => setSelectedRoom(room)}/
-          >
+            onRoomClick={(room) => setSelectedRoom(room)} 
+          />
         </div>
 
         {/* Book Now Button */}
