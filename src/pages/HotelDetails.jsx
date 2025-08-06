@@ -5,11 +5,16 @@ import Map from '../components/Map';
 import SearchBar from '../components/SearchBar';
 import RoomGrid from '../components/RoomGrid';
 import { LoadScript } from '@react-google-maps/api';
+import { useRef } from 'react';
+import useOutsideClick from '../hooks/useOutsideClick';
+
 
 const HotelDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const mapModalRef = useRef(null);
+  const descModalRef = useRef(null);
   const [hotel, setHotel] = useState(null);
   const [images, setImages] = useState([]);
   const [rooms, setRooms] = useState([]);
@@ -49,6 +54,11 @@ const HotelDetails = () => {
     return true;
   });
 
+  // Outside Click
+  useOutsideClick(mapModalRef, () => setShowMapModal(false));
+  useOutsideClick(descModalRef, () => setShowDescriptionModal(false));
+
+
   // Update hotelDetails object based on the first room in rooms
   useEffect(() => {
     if (rooms.length > 0) {
@@ -67,6 +77,8 @@ const HotelDetails = () => {
     }
   }, [rooms, hotel, checkin, checkout, guests]); // for room grid , the button only brings to first room
 
+
+  
   const handleBookNow = () => {
     // Pass hotelDetails to the booking page
     navigate('/booking', { state: { hotelDetails } });
@@ -169,7 +181,10 @@ const HotelDetails = () => {
         </div>
         {showDescriptionModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4">
+            <div 
+              ref={descModalRef}
+              className="bg-white rounded-xl p-6 max-w-lg w-full mx-4"
+            >
               <h2 className="text-xl font-semibold mb-4">Full Description</h2>
               <p className="text-sm text-[#0e151b] leading-relaxed whitespace-pre-line">
                 {hotel.description}
@@ -237,7 +252,10 @@ const HotelDetails = () => {
 
         {showMapModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-xl p-4 max-w-3xl w-full mx-4 relative">
+          <div 
+            ref={mapModalRef}
+            className="bg-white rounded-xl p-4 max-w-3xl w-full mx-4 relative"
+          >
             <h2 className="text-xl font-semibold mb-2">Hotel Location</h2>
             <div className="rounded-xl overflow-hidden">
               <Map coordinates={{ lat: hotel.latitude, lng: hotel.longitude }} height="400px" />
