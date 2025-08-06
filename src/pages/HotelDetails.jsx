@@ -245,8 +245,8 @@ const HotelDetails = () => {
                 key={type}
                 onClick={() => setSelectedFilter(type)}
                 className={`px-4 py-2 rounded-full border
-                  ${selectedFilter === type ? 'bg-black text-white' : 'bg-gray-100 text-black'}
-                  hover:bg-gray-200 transition`}
+                  ${selectedFilter === type ? 'bg-blue-400 text-black' : 'bg-blue-100 text-black'}
+                  hover:bg-blue-400 transition`}
               >
                 {type === 'all' ? 'All Rooms' : `${type} Bed${type !== '1' ? 's' : ''}`}
               </button>
