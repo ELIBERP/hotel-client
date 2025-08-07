@@ -33,13 +33,12 @@ const Stays = () => {
           </h2>
           
           {hasSearched && searchResults.length === 0 ? (
-            // No results found message
             <div className="text-center py-12">
               <p className="text-[#4e7997] text-lg mb-4">
                 No hotels found for your search. Try different keywords or browse our popular destinations below.
               </p>
               <button 
-                onClick={() => {setHasSearched(false); setSearchResults([]);}}
+                onClick={() => { setHasSearched(false); setSearchResults([]); }}
                 className="text-[#47a6ea] hover:underline font-medium"
               >
                 Browse Popular Destinations
@@ -48,7 +47,6 @@ const Stays = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {searchResults.length > 0 ? (
-                // Display search results
                 searchResults.map((hotel, index) => (
                   <div key={hotel.id || index} className="bg-white rounded-lg shadow-sm border border-[#e7eef3] overflow-hidden">
                     <div className="h-48 bg-gradient-to-r from-blue-400 to-blue-600"></div>
@@ -66,7 +64,6 @@ const Stays = () => {
                   </div>
                 ))
               ) : (
-                // Display default popular destinations
                 <>
                   <div className="bg-white rounded-lg shadow-sm border border-[#e7eef3] overflow-hidden">
                     <div className="h-48 bg-gradient-to-r from-blue-400 to-blue-600"></div>
