@@ -23,6 +23,7 @@ const HotelSearchResults = () => {
   const [prices, setPrices] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const HOTELS_PER_PAGE = 15;
+  
 
   // Get query params from URL
   const location = useLocation();
@@ -108,6 +109,7 @@ const HotelSearchResults = () => {
   // Pagination logic
   const totalPages = Math.ceil(filteredHotels.length / HOTELS_PER_PAGE);
   const paginatedHotels = filteredHotels.slice((currentPage - 1) * HOTELS_PER_PAGE, currentPage * HOTELS_PER_PAGE);
+  
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
@@ -115,6 +117,7 @@ const HotelSearchResults = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
+  const slicedHotels = paginatedHotels.slice(0, 6);
 
   return (
     <div className="p-10">
@@ -188,6 +191,7 @@ const HotelSearchResults = () => {
                 <>
                   <div className="flex flex-col gap-8">
                     {paginatedHotels.map((hotel, index) => {
+                      const nearbyHotels = slicedHotels.filter(h => h.id !== hotel.id);
                       const { name, address, rating, image_details, hires_image_index } = hotel;
                       const priceObj = prices.find(p => p.id === hotel.id);
                       const nights = getNights(checkin, checkout);
@@ -214,10 +218,14 @@ const HotelSearchResults = () => {
 
                         imageUrl = `${image_details.prefix}${index}${image_details.suffix}`;
                       }
-
+                      
                       return (
+                        
                         <Link
-                          to={`/hotels/${hotel.id}`}
+                          to={`/hotels/${hotel.id}${location.search}`}
+                          
+                          state={{ nearbyHotels }}
+                          onClick={() => console.log("Navigating with hotels:", nearbyHotels)}
                           key={hotel.id || index}
                           className="rounded-xl overflow-hidden shadow-lg border border-gray-200 bg-white flex hover:shadow-xl transition hover:scale-[1.01]">
                           <img
