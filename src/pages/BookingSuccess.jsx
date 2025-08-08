@@ -10,9 +10,15 @@ const BookingSuccess = () => {
 
   useEffect(() => {
     const sessionId = searchParams.get('session_id');
+    const bookingId = searchParams.get('booking_id');
     
     if (sessionId) {
       fetchBookingDetails(sessionId);
+      
+      // Update booking status in backend if bookingId is provided
+      if (bookingId) {
+        updateBookingStatus(bookingId, sessionId);
+      }
     }
   }, [searchParams]);
 
@@ -23,8 +29,9 @@ const BookingSuccess = () => {
       
       if (data.success) {
         setBookingDetails(data.booking);
-        // Update booking status in your database
-        updateBookingStatus(data.booking.bookingId, 'paid');
+        // Note: Booking status update is handled separately via updateBookingStatus()
+      } else {
+        console.error('Failed to fetch booking details:', data);
       }
     } catch (error) {
       console.error('Error fetching booking details:', error);
@@ -33,16 +40,31 @@ const BookingSuccess = () => {
     }
   };
 
-  const updateBookingStatus = async (bookingId, status) => {
-    // Call your existing API to update booking status
+  const updateBookingStatus = async (bookingId, sessionId) => {
     try {
-      await fetch(buildApiUrl(`/api/bookings/${bookingId}/status`), {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
+      // Get JWT token for authenticated request
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        console.warn('No auth token found, cannot update booking status');
+        return;
+      }
+
+      // Use the new backend endpoint for payment confirmation
+      await fetch(buildApiUrl(`/bookings/${bookingId}/confirm-payment`), {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          sessionId: sessionId,
+          paymentIntentId: sessionId // Fallback ID
+        })
       });
+      
+      console.log('✅ Booking payment confirmed successfully');
     } catch (error) {
-      console.error('Error updating booking status:', error);
+      console.error('❌ Error confirming booking payment:', error);
     }
   };
 

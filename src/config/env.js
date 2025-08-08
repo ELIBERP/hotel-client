@@ -1,7 +1,7 @@
 // Configuration for environment variables
 const config = {
   // API Configuration
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
+  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
   apiTimeout: parseInt(import.meta.env.VITE_API_TIMEOUT) || 10000,
   
   // App Information

@@ -13,9 +13,13 @@ class ApiService {
   async request(endpoint, options = {}) {
     const url = buildApiUrl(endpoint);
     
+    // Get JWT token from localStorage for authenticated requests
+    const token = localStorage.getItem('authToken');
+    
     const defaultOptions = {
       headers: {
         'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }), // Add JWT token if available
         ...options.headers,
       },
       signal: AbortSignal.timeout(this.timeout), // Built-in timeout
@@ -99,8 +103,50 @@ class ApiService {
     return this.get(`${getApiEndpoint('hotels')}/${id}/prices?${queryString}`);
   }
 
+  // Booking methods - Updated for new backend controller
   async createBooking(bookingData) {
-    return this.post(getApiEndpoint('bookings'), bookingData);
+    // Transform frontend booking data to match backend expectations
+    const backendBookingData = {
+      hotel_id: bookingData.hotelId || bookingData.hotel_id,
+      hotel_name: bookingData.hotelName || bookingData.hotel_name,
+      start_date: bookingData.checkIn || bookingData.checkInDate || bookingData.start_date,
+      end_date: bookingData.checkOut || bookingData.checkOutDate || bookingData.end_date,
+      nights: bookingData.nights || bookingData.numberOfNights,
+      adults: bookingData.adults || bookingData.numberOfGuests || 1,
+      children: bookingData.children || 0,
+      first_name: bookingData.firstName || bookingData.first_name,
+      last_name: bookingData.lastName || bookingData.last_name,
+      total_price: bookingData.totalPrice || bookingData.totalAmount || bookingData.total_price,
+      currency: bookingData.currency || 'SGD',
+      message_to_hotel: bookingData.specialRequests || bookingData.message_to_hotel,
+      room_types: bookingData.roomTypes || [bookingData.roomType] || []
+    };
+    
+    return this.post(getApiEndpoint('bookings'), backendBookingData);
+  }
+
+  // Get user's bookings (requires authentication)
+  async getUserBookings() {
+    return this.get(getApiEndpoint('bookings'));
+  }
+
+  // Get specific booking details (requires authentication)
+  async getBookingById(bookingId) {
+    return this.get(`${getApiEndpoint('bookings')}/${bookingId}`);
+  }
+
+  // Confirm payment for booking (requires authentication)
+  async confirmBookingPayment(bookingId, paymentData) {
+    return this.post(`${getApiEndpoint('bookings')}/${bookingId}/confirm-payment`, paymentData);
+  }
+
+  // Authentication methods
+  async login(email, password) {
+    return this.post('/auth/login', { email, password });
+  }
+
+  async register(userData) {
+    return this.post('/auth/register', userData);
   }
 
   // Payment methods

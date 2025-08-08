@@ -1,9 +1,11 @@
 // pages/BookingForm.jsx
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PaymentButton from '../components/PaymentButton';
 import { validateBookingData, formatCurrency } from '../utils/pricing';
 
 const BookingForm = () => {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1); // 1: Guest Info, 2: Review & Payment
   const [formData, setFormData] = useState({
     // Guest Information
@@ -16,8 +18,8 @@ const BookingForm = () => {
     // Booking Details (pre-filled or from URL params)
     hotelName: 'Grand Plaza Hotel',
     roomType: 'Deluxe Suite',
-    checkInDate: '2024-04-01',
-    checkOutDate: '2024-04-03',
+    checkInDate: '2025-08-15', // Updated to future date
+    checkOutDate: '2025-08-17', // Updated to future date
     numberOfGuests: 2,
     numberOfNights: 2,
     pricePerNight: 250,
@@ -67,43 +69,61 @@ const BookingForm = () => {
   const handleCreateBooking = async () => {
     setIsSubmitting(true);
     try {
-      // Call your booking API to store guest information
-      const bookingResponse = await fetch('http://localhost:3000/api/bookings', {
+      // Check authentication - JWT token required
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        alert('Please log in to create a booking');
+        navigate('/login');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Use the authenticated booking endpoint
+      const bookingResponse = await fetch('http://localhost:3000/bookings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          bookingId: formData.bookingId,
-          guestInfo: {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            email: formData.email,
-            phoneNumber: formData.phoneNumber,
-            specialRequests: formData.specialRequests
-          },
-          bookingDetails: {
-            hotelName: formData.hotelName,
-            roomType: formData.roomType,
-            checkInDate: formData.checkInDate,
-            checkOutDate: formData.checkOutDate,
-            numberOfGuests: formData.numberOfGuests,
-            numberOfNights: formData.numberOfNights,
-            totalAmount: formData.totalAmount
-          },
-          status: 'pending_payment'
+          hotel_id: 'hotel_' + Date.now(), // Replace with actual hotel ID
+          hotel_name: formData.hotelName,
+          start_date: formData.checkInDate,
+          end_date: formData.checkOutDate,
+          nights: formData.numberOfNights,
+          adults: formData.numberOfGuests,
+          children: 0,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          phone: formData.phoneNumber, // Fixed: map phoneNumber to phone
+          total_price: formData.totalAmount,
+          currency: 'SGD',
+          message_to_hotel: formData.specialRequests,
+          room_types: [formData.roomType]
         })
       });
 
       if (!bookingResponse.ok) {
-        throw new Error('Failed to create booking');
+        const errorData = await bookingResponse.json();
+        throw new Error(errorData.message || 'Failed to create booking');
       }
 
-      console.log('✅ Booking created successfully');
-      // The PaymentButton will handle the payment process
+      const result = await bookingResponse.json();
+      
+      if (result.success) {
+        console.log('✅ Booking created successfully:', result.booking);
+        
+        // If payment URL is provided, redirect to Stripe
+        if (result.payment && result.payment.url) {
+          console.log('🔄 Redirecting to payment:', result.payment.url);
+          window.location.href = result.payment.url;
+        }
+      } else {
+        throw new Error(result.message || 'Failed to create booking');
+      }
     } catch (error) {
       console.error('❌ Error creating booking:', error);
-      alert('Failed to create booking. Please try again.');
+      alert('Failed to create booking: ' + error.message);
     } finally {
       setIsSubmitting(false);
     }

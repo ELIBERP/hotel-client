@@ -12,6 +12,7 @@ import BookingCancel from "./pages/BookingCancel";
 import TestPayment from "./pages/TestPayment";
 import BookingForm from "./pages/BookingForm";
 import BookingDemo from "./pages/BookingDemo";
+import Login from "./pages/Login";
 import { logEnvironmentInfo } from "./config/env";
 import CreateBooking from "./pages/CreateBooking";
 
@@ -30,6 +31,7 @@ const App = () => {
           <main className="flex-1">
             <Routes>
               <Route path="/" element={<Landing />} />
+              <Route path="/login" element={<Login />} />
               <Route path="/stays" element={<Stays />} />
               <Route path="/about" element={<About />} />
               <Route path="/hotels/:id" element={<HotelDetails />} />
