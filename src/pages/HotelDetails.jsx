@@ -104,16 +104,30 @@ const HotelDetails = () => {
   }, [rooms, hotel, checkin, checkout, guests]); // for room grid , the button only brings to first room
 
 
-  const handleBookSelectedRoom = (room) => {
-    const nights = Math.ceil((new Date(checkout) - new Date(checkin)) / (1000 * 3600 * 24));
-    const selectedDetails = {
-      name: hotel?.name || '',
-      room: room.roomDescription,
-      checkIn: checkin,
-      checkOut: checkout,
-      guests: guests,
-      nights: nights,
-      price: room.converted_price || 500,
+  // This is the real data. But sometimes unable to take it from feature 2
+  // const handleBookSelectedRoom = (room) => {
+  //   const nights = Math.ceil((new Date(checkout) - new Date(checkin)) / (1000 * 3600 * 24));
+  //   const selectedDetails = {
+  //     name: hotel?.name || '',
+  //     room: room.roomDescription,
+  //     checkIn: checkin,
+  //     checkOut: checkout,
+  //     guests: guests,
+  //     nights: nights,
+  //     price: room.converted_price || 500,
+  //   };
+
+    // MOCK DATA for KY
+    const handleBookSelectedRoom = (room) => {
+      const nights = 2;
+      const selectedDetails = {
+      name: "ibis budget Singapore Selegie",
+      room: "Superior Room, 2 Twin Beds",
+      checkIn: "2025-08-29",
+      checkOut: "2025-08-31",
+      guests: 2,
+      nights: 2,
+      price: 321.22,
     };
 
     navigate('/booking', { state: { hotelDetails: selectedDetails } });
