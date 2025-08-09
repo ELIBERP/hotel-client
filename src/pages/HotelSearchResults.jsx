@@ -28,11 +28,11 @@ const HotelSearchResults = () => {
   // Get query params from URL
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-  const destinationId = searchParams.get('destination_id') || '';
-  const searchQuery = searchParams.get('search') || '';
-  const checkin = searchParams.get('checkin') || '2025-10-01';
-  const checkout = searchParams.get('checkout') || '2025-10-07';
-  const guests = parseInt(searchParams.get('guests'), 10) || 2;
+  const destinationId = searchParams.get('destination_id') //|| '';
+  const searchQuery = searchParams.get('search') //|| '';
+  const checkin = searchParams.get('checkin') //|| '2025-10-01';
+  const checkout = searchParams.get('checkout') //|| '2025-10-07';
+  const guests = parseInt(searchParams.get('guests'), 10) //|| 2;
 
   // find destination term using uid
   const destEntry = destinations.find((d) => d.uid === destinationId);
@@ -56,16 +56,23 @@ const HotelSearchResults = () => {
         // Use ApiService.getHotelsPrice for prices, using query params
         const priceQuery = {
           destination_id: destinationId,
-          checkin,
-          checkout,
+          checkin: checkin,
+          checkout: checkout,
           lang: 'en_US',
           currency: 'SGD',
-          guests,
+          guests: guests,
           partner_id: 1089,
           landing_page: 'wl-acme-earn',
           product_type: 'earn'
         };
-        const priceData = await ApiService.getHotelsPrice(priceQuery);
+        // const priceData = await ApiService.getHotelsPrice(priceQuery);
+        let priceData = await ApiService.getHotelsPrice(priceQuery);
+        let pollCount = 0;
+        while (priceData && priceData.completed !== true && pollCount < 20) {
+          await new Promise(res => setTimeout(res, 1000));
+          priceData = await ApiService.getHotelsPrice(priceQuery);
+          pollCount++;
+        }
         setPrices(priceData.hotels || []);
       } catch (err) {
         console.error('Failed to fetch hotels:', err);
@@ -343,5 +350,4 @@ const HotelSearchResults = () => {
     </div>
   );
 };
-
 export default HotelSearchResults;
