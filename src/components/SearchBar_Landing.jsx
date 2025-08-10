@@ -129,8 +129,15 @@ const SearchBar_Landing = ({
     } else if (checkinDate) {
       const checkin = new Date(checkinDate);
       const checkout = new Date(checkoutDate);
+      
+      // Calculate the difference in days
+      const diffTime = checkout.getTime() - checkin.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
       if (checkout <= checkin) {
         newErrors.checkout = "Check-out date must be after check-in date";
+      } else if (diffDays < 3) {
+        newErrors.checkout = "Check-out date must be at least 3 days after check-in date";
       }
     }
     
@@ -209,11 +216,11 @@ const SearchBar_Landing = ({
     return today.toISOString().split('T')[0];
   };
 
-  // Helper function to get minimum checkout date (1 day after checkin)
+  // Helper function to get minimum checkout date (3 days after checkin)
   const getMinCheckoutDate = () => {
     if (!checkinDate) return getTodayDate();
     const checkin = new Date(checkinDate);
-    checkin.setDate(checkin.getDate() + 1);
+    checkin.setDate(checkin.getDate() + 3); // Changed from +1 to +3 for minimum 3-day stay
     return checkin.toISOString().split('T')[0];
   };
 
@@ -257,7 +264,7 @@ const SearchBar_Landing = ({
             <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-b-lg shadow-lg z-50 max-h-60 overflow-y-auto mt-1">
               {filteredDestinations.map((destination, index) => (
                 <div
-                  key={destination.uid || index}
+                  key={`${destination.uid}-${index}`}
                   className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 text-sm transition-colors"
                   onClick={() => handleDropdownClick(destination.term, destination.uid)}
                 >
@@ -306,10 +313,20 @@ const SearchBar_Landing = ({
               min={getTodayDate()}
               onChange={(e) => {
                 setCheckinDate(e.target.value);
-                // Clear checkout if it's before new checkin
-                if (checkoutDate && new Date(e.target.value) >= new Date(checkoutDate)) {
-                  setCheckoutDate("");
+                
+                // Clear checkout if it doesn't meet the 3-day minimum stay requirement
+                if (checkoutDate) {
+                  const newCheckin = new Date(e.target.value);
+                  const checkout = new Date(checkoutDate);
+                  const diffTime = checkout.getTime() - newCheckin.getTime();
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  
+                  // Clear if checkout is before checkin or less than 3 days after
+                  if (newCheckin >= checkout || diffDays < 3) {
+                    setCheckoutDate("");
+                  }
                 }
+                
                 // Clear errors
                 if (errors.checkin) {
                   setErrors(prev => ({ ...prev, checkin: '' }));

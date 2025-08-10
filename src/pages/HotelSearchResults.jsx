@@ -67,7 +67,7 @@ const HotelSearchResults = () => {
       let pollCount = 0;
       let unchangedRounds = 0;
       let lastCount = priceData?.hotels?.length || 0;
-      while (!abortPollRef.current && priceData && priceData.completed !== true && pollCount < 12) { // cap ~12 polls
+      while (!abortPollRef.current && priceData && priceData.completed !== true && pollCount < 20) { 
         await new Promise(res => setTimeout(res, 1500)); // 1.5s interval to ease load
         const next = await ApiService.getHotelsPrice(priceQuery);
         const currentCount = next?.hotels?.length || 0;
@@ -79,8 +79,6 @@ const HotelSearchResults = () => {
         }
         priceData = next;
         pollCount++;
-        // Early break if no change for 3 consecutive rounds
-        if (unchangedRounds >= 3) break;
       }
       setPrices(priceData?.hotels || []);
     } catch (err) {
@@ -239,14 +237,15 @@ const HotelSearchResults = () => {
   // Pagination: slice hotels for current page
   const totalPages = Math.ceil(filteredHotels.length / HOTELS_PER_PAGE);
   const paginatedHotels = filteredHotels.slice((currentPage - 1) * HOTELS_PER_PAGE, currentPage * HOTELS_PER_PAGE);
+  
 
-  // Handle pagination button click
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
+  const slicedHotels = paginatedHotels.slice(0, 6);
 
   // Render hotel search results UI
   return (
@@ -408,6 +407,7 @@ const HotelSearchResults = () => {
               {/* Hotel cards */}
               <div className="flex flex-col gap-8">
                 {paginatedHotels.map((hotel, index) => {
+                      const nearbyHotels = slicedHotels.filter(h => h.id !== hotel.id);
                   const { name, address, rating, image_details, hires_image_index } = hotel;
                   const priceObj = prices.find(p => p.id === hotel.id);
                   const nights = getNights(committedCheckin || checkin, committedCheckout || checkout);
@@ -436,11 +436,15 @@ const HotelSearchResults = () => {
 
                     imageUrl = `${image_details.prefix}${index}${image_details.suffix}`;
                   }
-
+                      
                   // Render hotel card
                   return (
+                        
                     <Link
-                      to={`/hotels/${hotel.id}`}
+                      to={`/hotels/${hotel.id}${location.search}`}
+                          
+                          state={{ nearbyHotels }}
+                          onClick={() => console.log("Navigating with hotels:", nearbyHotels)}
                       key={hotel.id || index}
                       className="rounded-xl overflow-hidden shadow-lg border border-gray-200 bg-white flex hover:shadow-xl transition hover:scale-[1.01] w-full">
                       <img
