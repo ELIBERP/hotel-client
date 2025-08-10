@@ -293,7 +293,6 @@ const HotelSearchResults = () => {
             <label className="block text-xs font-semibold text-gray-600 mb-1">Guests & Rooms</label>
             <button type="button" onClick={()=>setShowGuestPicker(o=>!o)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-left flex justify-between items-center hover:border-gray-400">
               <span>{adults+children} guests, {rooms} room{rooms>1?'s':''}</span>
-              <span className="material-icons text-gray-500 text-base">expand_more</span>
             </button>
             {showGuestPicker && (
               <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow p-3 text-sm space-y-3">
