@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      const response = await ApiService.login(credentials);
+      const response = await ApiService.login(credentials.email, credentials.password);
       if (response.success) {
         ApiService.setUserData(response);
         setUser(response.user);
