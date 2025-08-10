@@ -204,12 +204,14 @@ const HotelSearchResults = () => {
   }, [destinationId]);
 
   // Merge price data into hotel objects, only include hotels with price
+  // Merge price data into hotel objects, compute per-night price (used for filtering)
   const hotelsWithPrice = hotels
     .map(hotel => {
       const priceObj = prices.find(p => p.id === hotel.id);
-      return priceObj && priceObj.price
-        ? { ...hotel, price: priceObj.price, searchRank: priceObj.searchRank }
-        : null;
+      if (!(priceObj && priceObj.price)) return null;
+      const nights = getNights(committedCheckin || checkin, committedCheckout || checkout);
+      const perNight = nights > 0 ? priceObj.price / nights : priceObj.price; // safeguard
+      return { ...hotel, price: priceObj.price, perNight, searchRank: priceObj.searchRank };
     })
     .filter(Boolean);
 
@@ -221,9 +223,9 @@ const HotelSearchResults = () => {
       const hotelBucket = Math.floor((hotel.rating || 0));
       if (hotelBucket !== selected) return false;
     }
-    // Filter by price range
-    if (priceMin && hotel.price < parseFloat(priceMin)) return false;
-    if (priceMax && hotel.price > parseFloat(priceMax)) return false;
+  // Filter by price range (per-night values as requested)
+  if (priceMin && hotel.perNight < parseFloat(priceMin)) return false;
+  if (priceMax && hotel.perNight > parseFloat(priceMax)) return false;
     return true;
   });
   // Sort by searchRank descending (default)
@@ -360,10 +362,10 @@ const HotelSearchResults = () => {
               ))}
             </div>
           </div>
-          {/* Price Range Filter */}
+          {/* Price Range Filter (per-night) */}
           <div className="mb-6">
             <label className="block text-sm font-semibold mb-2 text-blue-700 flex items-center gap-2">
-              <span className="material-icons text-green-400"></span>Price Range
+              <span className="material-icons text-green-400"></span>Price Range <span className="text-[11px] font-normal text-gray-500">(per night)</span>
             </label>
             <div className="flex gap-2 items-center">
               {/* Min price input */}
