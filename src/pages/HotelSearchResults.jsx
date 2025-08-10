@@ -1,5 +1,5 @@
 // React and dependencies
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import destinations from '../assets/destinations.json';
 import StarRating from '../components/StarRating';
 import { Link, useLocation } from 'react-router-dom';
@@ -40,6 +40,127 @@ const HotelSearchResults = () => {
   const destEntry = destinations.find((d) => d.uid === destinationId);
   const selectedDestination = destEntry?.term || 'Unknown location';
 
+  // --- Mini search bar state ---
+  const [miniDestInput, setMiniDestInput] = useState(selectedDestination !== 'Unknown location' ? selectedDestination : '');
+  const [miniDestId, setMiniDestId] = useState(destinationId || '');
+  const [showDestSuggestions, setShowDestSuggestions] = useState(false);
+  const [checkinDate, setCheckinDate] = useState(checkin || '');
+  const [checkoutDate, setCheckoutDate] = useState(checkout || '');
+  const [adults, setAdults] = useState(2);
+  const [children, setChildren] = useState(0);
+  const [rooms, setRooms] = useState(1);
+  const [showGuestPicker, setShowGuestPicker] = useState(false);
+  const [displayDestination, setDisplayDestination] = useState(selectedDestination);
+  // Committed dates used for price/night calculations (won't change until Search pressed)
+  const [committedCheckin, setCommittedCheckin] = useState(checkin || '');
+  const [committedCheckout, setCommittedCheckout] = useState(checkout || '');
+  // Polling guards
+  const isPollingRef = useRef(false);
+  const abortPollRef = useRef(false);
+
+  const pollPrices = async (priceQuery) => {
+    if (isPollingRef.current) return; // avoid overlapping polls
+    isPollingRef.current = true;
+    abortPollRef.current = false;
+    try {
+      let priceData = await ApiService.getHotelsPrice(priceQuery);
+      let pollCount = 0;
+      let unchangedRounds = 0;
+      let lastCount = priceData?.hotels?.length || 0;
+      while (!abortPollRef.current && priceData && priceData.completed !== true && pollCount < 12) { // cap ~12 polls
+        await new Promise(res => setTimeout(res, 1500)); // 1.5s interval to ease load
+        const next = await ApiService.getHotelsPrice(priceQuery);
+        const currentCount = next?.hotels?.length || 0;
+        if (currentCount === lastCount) {
+          unchangedRounds += 1;
+        } else {
+          unchangedRounds = 0;
+          lastCount = currentCount;
+        }
+        priceData = next;
+        pollCount++;
+        // Early break if no change for 3 consecutive rounds
+        if (unchangedRounds >= 3) break;
+      }
+      setPrices(priceData?.hotels || []);
+    } catch (err) {
+      console.error('Price polling failed:', err);
+    } finally {
+      isPollingRef.current = false;
+    }
+  };
+
+  // Suggest destinations
+  const destSuggestions = miniDestInput.length > 1
+    ? destinations.filter(d => d.term && d.term.toLowerCase().includes(miniDestInput.toLowerCase())).slice(0,8)
+    : [];
+
+  const handleSelectDestination = (d) => {
+    setMiniDestInput(d.term);
+    setMiniDestId(d.uid);
+    setShowDestSuggestions(false);
+  };
+
+  const formatGuestsParam = () => {
+    const totalGuestsSingle = adults + children;
+    if (rooms <= 1) return String(totalGuestsSingle);
+    return Array(rooms).fill(totalGuestsSingle).join('|');
+  };
+
+  const handleMiniSearch = async (e) => {
+    e.preventDefault();
+    let destId = miniDestId;
+    if (!destId && destSuggestions.length) {
+      destId = destSuggestions[0].uid;
+      setMiniDestId(destId);
+    }
+    if (!destId) return; // require destination
+    const activeCheckin = checkinDate;
+    const activeCheckout = checkoutDate;
+    setLoading(true);
+    setShowGuestPicker(false);
+    setShowDestSuggestions(false);
+    try {
+      // Fetch hotels list
+      const hotelData = await ApiService.getHotels({ destination_id: destId });
+      if (Array.isArray(hotelData)) {
+        setHotels(hotelData);
+      } else if (hotelData && Array.isArray(hotelData.hotels)) {
+        setHotels(hotelData.hotels);
+      } else {
+        setHotels([]);
+      }
+      // Build price query with defaults
+      const priceQuery = {
+        destination_id: destId,
+        checkin: activeCheckin,
+        checkout: activeCheckout,
+        lang: 'en_US',
+        currency: 'SGD',
+        guests: formatGuestsParam(),
+        partner_id: 1089,
+        landing_page: 'wl-acme-earn',
+        product_type: 'earn'
+      };
+  await pollPrices(priceQuery);
+      // Update display destination name
+      const destName = destinations.find(d => d.uid === destId)?.term || displayDestination;
+      setDisplayDestination(destName);
+      // Commit dates AFTER successful search so UI recalculates nights
+      setCommittedCheckin(activeCheckin);
+      setCommittedCheckout(activeCheckout);
+      setCurrentPage(1);
+    } catch (err) {
+      console.error('Mini search failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const adjustAdults = (delta) => setAdults(a => Math.min(10, Math.max(1, a + delta)));
+  const adjustChildren = (delta) => setChildren(c => Math.min(10, Math.max(0, c + delta)));
+  const adjustRooms = (delta) => setRooms(r => Math.min(8, Math.max(1, r + delta)));
+
   // Fetch hotels and poll for prices when destinationId changes
   useEffect(() => {
     const fetchHotels = async () => {
@@ -69,15 +190,7 @@ const HotelSearchResults = () => {
           product_type: 'earn'
         };
         // Poll price API until completed or max attempts
-        let priceData = await ApiService.getHotelsPrice(priceQuery);
-        let pollCount = 0;
-        while (priceData && priceData.completed !== true && pollCount < 20) {
-          await new Promise(res => setTimeout(res, 1000));
-          priceData = await ApiService.getHotelsPrice(priceQuery);
-          pollCount++;
-        }
-        // Set prices from API response
-        setPrices(priceData.hotels || []);
+        await pollPrices(priceQuery);
       } catch (err) {
         console.error('Failed to fetch hotels:', err);
         setHotels([]);
@@ -87,6 +200,7 @@ const HotelSearchResults = () => {
     };
 
     fetchHotels();
+    return () => { abortPollRef.current = true; };
   }, [destinationId]);
 
   // Merge price data into hotel objects, only include hotels with price
@@ -101,8 +215,12 @@ const HotelSearchResults = () => {
 
   // Apply filters and sorting to hotels
   let filteredHotels = hotelsWithPrice.filter(hotel => {
-    // Filter by star rating
-    if (starFilter && hotel.rating !== parseInt(starFilter, 10)) return false;
+    // Filter by star rating (bucket fractional ratings so 1.5 counts as 1, 2.5 as 2, etc.)
+    if (starFilter) {
+      const selected = parseInt(starFilter, 10);
+      const hotelBucket = Math.floor((hotel.rating || 0));
+      if (hotelBucket !== selected) return false;
+    }
     // Filter by price range
     if (priceMin && hotel.price < parseFloat(priceMin)) return false;
     if (priceMax && hotel.price > parseFloat(priceMax)) return false;
@@ -132,7 +250,87 @@ const HotelSearchResults = () => {
   return (
     <div className="p-10">
       {/* Page heading */}
-      <h1 className="text-3xl font-bold mb-6">Hotels in {selectedDestination}</h1>
+  <h1 className="text-3xl font-bold mb-6">Hotels in {displayDestination}</h1>
+      {/* Mini Search Bar */}
+      <form onSubmit={handleMiniSearch} className="mb-8 bg-white/90 border border-gray-200 rounded-2xl shadow p-4 md:p-5 flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          {/* Destination */}
+          <div className="relative md:flex-1">
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Destination</label>
+            <input
+              type="text"
+              value={miniDestInput}
+              onChange={(e)=>{setMiniDestInput(e.target.value); setShowDestSuggestions(true);}}
+              onFocus={()=> setShowDestSuggestions(true)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+              placeholder="Where to?"
+            />
+            {showDestSuggestions && destSuggestions.length > 0 && (
+              <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow max-h-60 overflow-auto">
+                {destSuggestions.map(d => (
+                  <button type="button" key={d.uid} onClick={()=>handleSelectDestination(d)} className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100">
+                    {d.term}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          {/* Dates */}
+          <div className="flex gap-4 md:w-[320px]">
+            <div className="flex-1">
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Check-in</label>
+              <input type="date" value={checkinDate} onChange={e=>setCheckinDate(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Check-out</label>
+              <input type="date" value={checkoutDate} onChange={e=>setCheckoutDate(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+            </div>
+          </div>
+          {/* Guests & Rooms */}
+          <div className="relative md:w-56">
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Guests & Rooms</label>
+            <button type="button" onClick={()=>setShowGuestPicker(o=>!o)} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-left flex justify-between items-center hover:border-gray-400">
+              <span>{adults+children} guests, {rooms} room{rooms>1?'s':''}</span>
+              <span className="material-icons text-gray-500 text-base">expand_more</span>
+            </button>
+            {showGuestPicker && (
+              <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow p-3 text-sm space-y-3">
+                <div className="flex justify-between items-center">
+                  <span>Adults</span>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={()=>adjustAdults(-1)} className="w-6 h-6 flex items-center justify-center border rounded" aria-label="Decrease adults">-</button>
+                    <span>{adults}</span>
+                    <button type="button" onClick={()=>adjustAdults(1)} className="w-6 h-6 flex items-center justify-center border rounded" aria-label="Increase adults">+</button>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Children</span>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={()=>adjustChildren(-1)} className="w-6 h-6 flex items-center justify-center border rounded">-</button>
+                    <span>{children}</span>
+                    <button type="button" onClick={()=>adjustChildren(1)} className="w-6 h-6 flex items-center justify-center border rounded">+</button>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Rooms</span>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={()=>adjustRooms(-1)} className="w-6 h-6 flex items-center justify-center border rounded">-</button>
+                    <span>{rooms}</span>
+                    <button type="button" onClick={()=>adjustRooms(1)} className="w-6 h-6 flex items-center justify-center border rounded">+</button>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button type="button" onClick={()=>setShowGuestPicker(false)} className="text-xs text-blue-600 font-medium">Done</button>
+                </div>
+              </div>
+            )}
+          </div>
+          {/* Search */}
+          <div className="md:w-32 flex items-end">
+            <button type="submit" className="w-full h-[42px] md:h-[46px] rounded-lg bg-[#47a6ea] hover:bg-[#3690d4] text-white font-semibold text-sm">Search</button>
+          </div>
+        </div>
+      </form>
       <div className="flex flex-col md:flex-row gap-8">
         {/* Sidebar Filters */}
         <aside className="w-full md:w-72 bg-white/90 rounded-2xl shadow-lg border border-blue-100 p-6 mb-8 md:mb-0 sticky top-8 h-fit">
@@ -211,7 +409,7 @@ const HotelSearchResults = () => {
                 {paginatedHotels.map((hotel, index) => {
                   const { name, address, rating, image_details, hires_image_index } = hotel;
                   const priceObj = prices.find(p => p.id === hotel.id);
-                  const nights = getNights(checkin, checkout);
+                  const nights = getNights(committedCheckin || checkin, committedCheckout || checkout);
                   const priceText = `Total $${priceObj.price} for ${nights} night${nights > 1 ? 's' : ''}`;
                   const perNight = priceObj && nights ? (priceObj.price / nights) : null;
 
