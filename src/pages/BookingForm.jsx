@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import PaymentButton from '../components/PaymentButton';
 import { validateBookingData, formatCurrency } from '../utils/pricing';
+import { SUPPORTED_CURRENCIES, convertFromSGD, getExchangeDisplay, formatCurrencyWithSymbol } from '../utils/currency';
 import ApiService from '../services/api';
 
 const BookingForm = () => {
@@ -26,6 +27,7 @@ const BookingForm = () => {
     numberOfNights: 2,
     pricePerNight: 250,
     totalAmount: 500, // This will be the specified price
+    currency: 'SGD', // Default currency - user can change this
     
     // Generated booking ID
     bookingId: `booking_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -296,6 +298,37 @@ const BookingForm = () => {
         </p>
       </div>
 
+      {/* Currency Selection */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <h3 className="text-lg font-semibold text-yellow-800 mb-3">💳 Payment Currency</h3>
+        <p className="text-sm text-yellow-700 mb-3">
+          Select your preferred currency for payment. Base price: {formatCurrency(formData.totalAmount, 'SGD')}
+          {formData.currency !== 'SGD' && (
+            <span className="font-semibold"> → {getExchangeDisplay(formData.totalAmount, formData.currency)}</span>
+          )}
+        </p>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Preferred Payment Currency
+          </label>
+          <select
+            value={formData.currency}
+            onChange={(e) => handleInputChange('currency', e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {SUPPORTED_CURRENCIES.map(curr => (
+              <option key={curr.code} value={curr.code}>
+                {curr.flag} {curr.name} ({curr.code})
+              </option>
+            ))}
+          </select>
+          <p className="text-sm text-gray-500 mt-2">
+            💡 <strong>Note:</strong> Stripe will charge you the converted amount in {formData.currency}. 
+            Exchange rates are updated in real-time.
+          </p>
+        </div>
+      </div>
+
       {/* Next Button */}
       <div className="flex justify-end">
         <button
@@ -347,7 +380,7 @@ const BookingForm = () => {
         <div className="space-y-2">
           <div className="flex justify-between text-lg">
             <span>Room Rate ({formData.numberOfNights} nights)</span>
-            <span>{formatCurrency(formData.pricePerNight * formData.numberOfNights)}</span>
+            <span>{formatCurrency(formData.pricePerNight * formData.numberOfNights, 'SGD')}</span>
           </div>
           <div className="flex justify-between text-sm text-gray-600">
             <span>Taxes & Fees</span>
@@ -355,9 +388,20 @@ const BookingForm = () => {
           </div>
           <hr className="my-2" />
           <div className="flex justify-between text-xl font-bold text-green-600">
-            <span>Total Amount</span>
-            <span>{formatCurrency(formData.totalAmount)}</span>
+            <span>Total Amount (SGD)</span>
+            <span>{formatCurrency(formData.totalAmount, 'SGD')}</span>
           </div>
+          {formData.currency !== 'SGD' && (
+            <div className="bg-blue-50 border border-blue-200 rounded p-3 mt-3">
+              <div className="flex justify-between text-lg font-semibold text-blue-800">
+                <span>💳 You'll pay in {formData.currency}</span>
+                <span>{formatCurrencyWithSymbol(convertFromSGD(formData.totalAmount, formData.currency), formData.currency)}</span>
+              </div>
+              <p className="text-sm text-blue-600 mt-1">
+                Exchange rate: {getExchangeDisplay(formData.totalAmount, formData.currency)}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

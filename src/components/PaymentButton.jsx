@@ -1,9 +1,16 @@
 // components/PaymentButton.jsx
 import React, { useState } from 'react';
 import { buildApiUrl } from '../config/env';
+import { convertFromSGD } from '../utils/currency';
 
 const PaymentButton = ({ bookingData, isSubmitting, onBeforePayment }) => {
   const [loading, setLoading] = useState(false);
+
+  // Calculate converted amount for display
+  const currency = bookingData.currency || 'SGD';
+  const convertedAmount = currency === 'SGD' 
+    ? bookingData.totalAmount 
+    : convertFromSGD(bookingData.totalAmount, currency);
 
   const handlePayment = async () => {
     setLoading(true);
@@ -13,8 +20,16 @@ const PaymentButton = ({ bookingData, isSubmitting, onBeforePayment }) => {
         await onBeforePayment();
       }
 
-      const apiUrl = buildApiUrl('/api/payment/create-checkout-session');
+      const apiUrl = buildApiUrl('/api/bookings/create-payment-session');
       console.log('🔍 API URL being called:', apiUrl);
+      
+      // Convert SGD amount to target currency for Stripe
+      const currency = bookingData.currency || 'SGD';
+      const convertedAmount = currency === 'SGD' 
+        ? bookingData.totalAmount 
+        : convertFromSGD(bookingData.totalAmount, currency);
+      
+      console.log(`💱 Currency conversion: SGD ${bookingData.totalAmount} → ${currency} ${convertedAmount}`);
       
       const requestData = {
         hotelName: bookingData.hotelName,
@@ -24,8 +39,9 @@ const PaymentButton = ({ bookingData, isSubmitting, onBeforePayment }) => {
         numberOfGuests: bookingData.numberOfGuests,
         pricePerNight: bookingData.pricePerNight,
         numberOfNights: bookingData.numberOfNights,
-        totalAmount: bookingData.totalAmount, // Use the specified price directly
+        totalAmount: convertedAmount, // Use CONVERTED amount for Stripe
         bookingId: bookingData.bookingId || bookingData.id,
+        currency: currency.toLowerCase(), // Pass currency to backend
       };
       
       console.log('📤 Request data:', requestData);
@@ -74,7 +90,7 @@ const PaymentButton = ({ bookingData, isSubmitting, onBeforePayment }) => {
           {isSubmitting ? 'Creating Booking...' : 'Processing...'}
         </>
       ) : (
-        `💳 Proceed to Payment - ${bookingData.totalAmount ? `$${bookingData.totalAmount}` : 'Pay Now'}`
+        `💳 Proceed to Payment`
       )}
     </button>
   );

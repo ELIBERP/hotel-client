@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { buildApiUrl } from '../config/env';
+import { formatCurrency } from '../utils/pricing';
 
 const BookingSuccess = () => {
   const [searchParams] = useSearchParams();
@@ -90,7 +91,9 @@ const BookingSuccess = () => {
                 </div>
                 <div>
                   <p className="font-medium text-gray-700">Total Paid:</p>
-                  <p className="text-gray-900 font-semibold">${bookingDetails.totalAmount}</p>
+                  <p className="text-gray-900 font-semibold">
+                    {formatCurrency(bookingDetails.totalAmount, bookingDetails.currency || 'USD')}
+                  </p>
                 </div>
                 <div className="md:col-span-2">
                   <p className="font-medium text-gray-700">Payment ID:</p>
