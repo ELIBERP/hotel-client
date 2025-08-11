@@ -138,28 +138,41 @@ const HotelSearchResults = () => {
 
     const activeCheckin = checkinDate;
     const activeCheckout = checkoutDate;
+    setLoading(true);
     setShowGuestPicker(false);
     setShowDestSuggestions(false);
 
     try {
-      // Temporarily update URL params for fetchHotels to use
-      const currentUrl = new URL(window.location);
-      const originalDestId = currentUrl.searchParams.get('destination_id');
-      const originalCheckin = currentUrl.searchParams.get('checkin');
-      const originalCheckout = currentUrl.searchParams.get('checkout');
-      const originalGuests = currentUrl.searchParams.get('guests');
+      // Fetch hotels list directly
+      const hotelData = await ApiService.getHotels({ destination_id: destId });
       
-      // Set new search params
-      currentUrl.searchParams.set('destination_id', destId);
-      currentUrl.searchParams.set('checkin', activeCheckin);
-      currentUrl.searchParams.set('checkout', activeCheckout);
-      currentUrl.searchParams.set('guests', formatGuestsParam());
-      
-      // Update URL without page reload
-      window.history.replaceState({}, '', currentUrl);
-      
-      // Call fetchHotels which will use the updated URL params
-      await fetchHotels();
+      // Ensure hotels is always an array
+      if (Array.isArray(hotelData)) {
+        setHotels(hotelData);
+      } else if (hotelData && Array.isArray(hotelData.hotels)) {
+        setHotels(hotelData.hotels);
+      } else {
+        setHotels([]);
+      }
+
+      // Stop loading as soon as hotels are available
+      setLoading(false);
+
+      // Build price query with defaults
+      const priceQuery = {
+        destination_id: destId,
+        checkin: activeCheckin,
+        checkout: activeCheckout,
+        lang: 'en_US',
+        currency: 'SGD',
+        guests: formatGuestsParam(),
+        partner_id: 1089,
+        landing_page: 'wl-acme-earn',
+        product_type: 'earn'
+      };
+
+      // Load prices in background
+      pollPrices(priceQuery);
       
       // Update display destination name
       const destName = destinations.find(d => d.uid === destId)?.term || displayDestination;
@@ -199,7 +212,10 @@ const HotelSearchResults = () => {
         setHotels([]);
       }
 
-      // Build price query for initial load
+      // Stop loading as soon as hotels are available
+      setLoading(false);
+
+      // Build price query for initial load (async in background)
       const priceQuery = {
         destination_id: destinationId,
         checkin: checkin,
@@ -212,11 +228,11 @@ const HotelSearchResults = () => {
         product_type: 'earn'
       };
 
-      await pollPrices(priceQuery);
+      // Load prices in background without blocking UI
+      pollPrices(priceQuery);
     } catch (err) {
       console.error('Failed to fetch hotels:', err);
       setHotels([]);
-    } finally {
       setLoading(false);
     }
   };
@@ -235,10 +251,15 @@ const HotelSearchResults = () => {
   const hotelsWithPrice = hotels
     .map(hotel => {
       const priceObj = prices.find(p => p.id === hotel.id);
-      if (!(priceObj && priceObj.price)) return null;
+      if (!priceObj) {
+        // Show hotel even without price data, with loading state
+        const nights = getNights(committedCheckin || checkin, committedCheckout || checkout);
+        return { ...hotel, price: null, perNight: null, searchRank: 0, priceLoading: true };
+      }
+      if (!priceObj.price) return null;
       const nights = getNights(committedCheckin || checkin, committedCheckout || checkout);
-      const perNight = nights > 0 ? priceObj.price / nights : priceObj.price; // safeguard
-      return { ...hotel, price: priceObj.price, perNight, searchRank: priceObj.searchRank };
+      const perNight = nights > 0 ? priceObj.price / nights : priceObj.price;
+      return { ...hotel, price: priceObj.price, perNight, searchRank: priceObj.searchRank, priceLoading: false };
     })
     .filter(Boolean);
 
@@ -246,15 +267,20 @@ const HotelSearchResults = () => {
   let filteredHotels = hotelsWithPrice.filter(hotel => {
     // Filter by star rating (bucket fractional ratings so 1.5 counts as 1, 2.5 as 2, etc.)
     if (starFilters.length > 0) {
-      const hotelBucket = Math.floor((hotel.rating || 0));
+      const hotelRating = hotel.rating;
+      // Skip hotels without ratings when star filters are applied
+      if (!hotelRating || hotelRating <= 0) return false;
+      const hotelBucket = Math.floor(hotelRating);
       if (!starFilters.includes(hotelBucket)) return false;
     }
-  // Filter by price range (per-night values as requested)
-  if (priceMin && hotel.perNight < parseFloat(priceMin)) return false;
-  if (priceMax && hotel.perNight > parseFloat(priceMax)) return false;
+    // Filter by price range (per-night values as requested) - skip if price is loading
+    if (priceMin && hotel.perNight !== null && hotel.perNight < parseFloat(priceMin)) return false;
+    if (priceMax && hotel.perNight !== null && hotel.perNight > parseFloat(priceMax)) return false;
     // Filter by amenities (AND logic: must include all selected amenities)
     if (amenityFilters.length > 0) {
-      const am = hotel.amenities || {};
+      const am = hotel.amenities;
+      // Skip hotels without amenities data when amenity filters are applied
+      if (!am || typeof am !== 'object') return false;
       for (const key of amenityFilters) {
         if (!am[key]) return false;
       }
@@ -263,11 +289,11 @@ const HotelSearchResults = () => {
   });
   // Sort by searchRank descending (default)
   filteredHotels = filteredHotels.sort((a, b) => b.searchRank - a.searchRank);
-  // Sort by price if selected
+  // Sort by price if selected - only show hotels with loaded prices
   if (priceSort === 'asc') {
-    filteredHotels = filteredHotels.sort((a, b) => a.price - b.price);
+    filteredHotels = filteredHotels.filter(hotel => !hotel.priceLoading && hotel.price !== null).sort((a, b) => a.price - b.price);
   } else if (priceSort === 'desc') {
-    filteredHotels = filteredHotels.sort((a, b) => b.price - a.price);
+    filteredHotels = filteredHotels.filter(hotel => !hotel.priceLoading && hotel.price !== null).sort((a, b) => b.price - a.price);
   }
   // Pagination: slice hotels for current page
   const totalPages = Math.ceil(filteredHotels.length / HOTELS_PER_PAGE);
@@ -471,7 +497,42 @@ const HotelSearchResults = () => {
           </div>
           {/* Loading and empty states */}
           {loading ? (
-            <p>Loading hotels...</p>
+            <div className="flex flex-col gap-8">
+              {/* Skeleton loading cards */}
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div key={index} className="relative rounded-xl overflow-hidden shadow-lg border border-gray-200 bg-white flex animate-pulse">
+                  {/* Skeleton image */}
+                  <div className="w-80 h-56 bg-gray-200 flex-shrink-0"></div>
+                  
+                  {/* Skeleton content */}
+                  <div className="p-6 flex w-full justify-between gap-6">
+                    <div className="flex flex-col justify-between flex-1">
+                      <div>
+                        {/* Hotel name skeleton */}
+                        <div className="h-8 bg-gray-200 rounded mb-2 w-3/4"></div>
+                        {/* Address skeleton */}
+                        <div className="h-4 bg-gray-200 rounded mb-2 w-1/2"></div>
+                        {/* Star rating skeleton */}
+                        <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                        {/* Amenities skeleton */}
+                        <div className="flex gap-2 mt-3">
+                          <div className="h-6 w-12 bg-gray-200 rounded"></div>
+                          <div className="h-6 w-16 bg-gray-200 rounded"></div>
+                          <div className="h-6 w-14 bg-gray-200 rounded"></div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Price skeleton */}
+                    <div className="flex flex-col items-end justify-end text-right min-w-[170px]">
+                      <div className="h-10 bg-gray-200 rounded w-32 mb-2"></div>
+                      <div className="h-4 bg-gray-200 rounded w-24 mb-4"></div>
+                      <div className="h-12 bg-gray-200 rounded w-full"></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : hotels.length === 0 ? (
             <p>No hotels found for this destination.</p>
           ) : (
@@ -479,12 +540,26 @@ const HotelSearchResults = () => {
               {/* Hotel cards */}
               <div className="flex flex-col gap-8">
                 {paginatedHotels.map((hotel, index) => {
-                      const nearbyHotels = slicedHotels.filter(h => h.id !== hotel.id);
+                  const nearbyHotels = slicedHotels.filter(h => h.id !== hotel.id);
                   const { name, address, rating, image_details, hires_image_index } = hotel;
                   const priceObj = prices.find(p => p.id === hotel.id);
                   const nights = getNights(committedCheckin || checkin, committedCheckout || checkout);
-                  const priceText = `Total $${priceObj.price} for ${nights} night${nights > 1 ? 's' : ''}`;
-                  const perNight = priceObj && nights ? (priceObj.price / nights) : null;
+                  
+                  // Handle price text based on loading state
+                  let priceText = '';
+                  let perNight = null;
+                  
+                  if (hotel.priceLoading) {
+                    priceText = 'Loading price...';
+                  } else if (priceObj && priceObj.price) {
+                    priceText = `Total $${priceObj.price} for ${nights} night${nights > 1 ? 's' : ''}`;
+                    perNight = nights > 0 ? (priceObj.price / nights) : priceObj.price;
+                  } else if (hotel.price) {
+                    priceText = `Total $${hotel.price} for ${nights} night${nights > 1 ? 's' : ''}`;
+                    perNight = hotel.perNight;
+                  } else {
+                    priceText = 'Price unavailable';
+                  }
 
                   // Build hotel image URL
                   let imageUrl = 'https://dummyimage.com/400x300/cccccc/000000&text=No+Image';
@@ -514,7 +589,6 @@ const HotelSearchResults = () => {
                         
                     <Link
                       to={`/hotels/${hotel.id}${location.search}`}
-                          
                           state={{ nearbyHotels }}
                           onClick={() => console.log("Navigating with hotels:", nearbyHotels)}
                       key={hotel.id || index}
@@ -533,13 +607,19 @@ const HotelSearchResults = () => {
                           </span>
                         </div>
                       )}
-                      <div className="relative w-80 h-56 border-r border-gray-300 overflow-hidden flex-shrink-0 bg-gray-100">
+                      <div className="relative w-full sm:w-64 md:w-72 lg:w-80 h-auto border-r border-gray-300 overflow-hidden flex-shrink-0 bg-gray-100">
                         <img
                           src={imageUrl}
                           alt={name}
                           loading="lazy"
                           onError={(e)=>{ if(!e.currentTarget.dataset.fallback){ e.currentTarget.dataset.fallback='1'; e.currentTarget.src='/hotel.svg'; } }}
-                          className="absolute inset-0 w-full h-full object-cover"
+                          className="absolute inset-0 w-full block"
+                          style={{ 
+                            objectFit: 'cover',
+                            minHeight: '100%',
+                            height: '100%',
+                            width: '100%'
+                          }}
                         />
                       </div>
                       <div className="p-6 flex w-full justify-between gap-6">
@@ -572,12 +652,24 @@ const HotelSearchResults = () => {
                           </div>
                         </div>
                         <div className="flex flex-col items-end justify-end text-right min-w-[170px]">
-                          {perNight !== null && (
-                            <div className="text-black font-bold text-3xl leading-tight">
-                              ${perNight.toFixed(0)} <span className="text-base font-medium">/night</span>
-                            </div>
+                          {hotel.priceLoading ? (
+                            <>
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
+                                <span className="text-sm text-gray-500">Loading price...</span>
+                              </div>
+                              <div className="h-6 bg-gray-200 rounded w-24 mb-4 animate-pulse"></div>
+                            </>
+                          ) : perNight !== null ? (
+                            <>
+                              <div className="text-black font-bold text-3xl leading-tight">
+                                ${perNight.toFixed(0)} <span className="text-base font-medium">/night</span>
+                              </div>
+                              <div className="text-black font-semibold text-sm mt-1">{priceText}</div>
+                            </>
+                          ) : (
+                            <div className="text-gray-500 text-sm mb-4">Price unavailable</div>
                           )}
-                          <div className="text-black font-semibold text-sm mt-1">{priceText}</div>
                           <button
                             type="button"
                             className="mt-4 w-full px-5 py-3 text-sm font-semibold bg-[#47a6ea] hover:bg-[#3690d4] text-white rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-blue-300 transition"
