@@ -475,6 +475,12 @@ const HotelSearchResults = () => {
                             </div>
                           )}
                           <div className="text-blue-600 font-semibold text-xs mt-1">{priceText}</div>
+                          <button
+                            type="button"
+                            className="mt-3 w-full px-6 py-3 text-sm md:text-base font-semibold bg-[#47a6ea] hover:bg-[#3690d4] text-white rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors"
+                          >
+                            Select
+                          </button>
                         </div>
                       </div>
                     </Link>
