@@ -9,7 +9,10 @@
     "preview": "vite preview",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:payment": "jest --config=jest.config.payment.js",
+    "test:payment:watch": "jest --config=jest.config.payment.js --watch",
+    "test:payment:coverage": "jest --config=jest.config.payment.js --coverage"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.7",
