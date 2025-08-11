@@ -14,7 +14,6 @@ const HotelDetails = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const nearbyHotels = location.state?.nearbyHotels || [];
-  console.log("Nearby hotels received:", nearbyHotels);
   const mapModalRef = useRef(null);
   const descModalRef = useRef(null);
   const [hotel, setHotel] = useState(null);
@@ -35,6 +34,7 @@ const HotelDetails = () => {
     nights: 0,
     price: 0,
   });
+  const [googleApiLoaded, setGoogleApiLoaded] = useState(false); // State to track if Google Maps API is loaded
 
   // Get query parameters from the URL
   const queryParams = new URLSearchParams(location.search);
@@ -105,30 +105,30 @@ const HotelDetails = () => {
 
 
   // This is the real data. But sometimes unable to take it from feature 2
-  // const handleBookSelectedRoom = (room) => {
-  //   const nights = Math.ceil((new Date(checkout) - new Date(checkin)) / (1000 * 3600 * 24));
-  //   const selectedDetails = {
-  //     name: hotel?.name || '',
-  //     room: room.roomDescription,
-  //     checkIn: checkin,
-  //     checkOut: checkout,
-  //     guests: guests,
-  //     nights: nights,
-  //     price: room.converted_price || 500,
-  //   };
+  const handleBookSelectedRoom = (room) => {
+    const nights = Math.ceil((new Date(checkout) - new Date(checkin)) / (1000 * 3600 * 24));
+    const selectedDetails = {
+      name: hotel?.name || '',
+      room: room.roomDescription,
+      checkIn: checkin,
+      checkOut: checkout,
+      guests: guests,
+      nights: nights,
+      price: room.converted_price || 500,
+    };
 
     // MOCK DATA for KY
-    const handleBookSelectedRoom = (room) => {
-      const nights = 2;
-      const selectedDetails = {
-      name: "ibis budget Singapore Selegie",
-      room: "Superior Room, 2 Twin Beds",
-      checkIn: "2025-08-29",
-      checkOut: "2025-08-31",
-      guests: 2,
-      nights: 2,
-      price: 321.22,
-    };
+    // const handleBookSelectedRoom = (room) => {
+    //   const nights = 2;
+    //   const selectedDetails = {
+    //   name: "ibis budget Singapore Selegie",
+    //   room: "Superior Room, 2 Twin Beds",
+    //   checkIn: "2025-08-29",
+    //   checkOut: "2025-08-31",
+    //   guests: 2,
+    //   nights: 2,
+    //   price: 321.22,
+    // };
 
     navigate('/booking', { state: { hotelDetails: selectedDetails } });
   };
@@ -181,7 +181,7 @@ const HotelDetails = () => {
   if (!hotel) return <div>Loading hotel details...</div>;
 
   return (
-    <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLEMAP_API_KEY}>
+    <div>
       <div>
         <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-6">
           <div className="w-full border-b border-gray-200 bg-white mb-6">
@@ -255,10 +255,15 @@ const HotelDetails = () => {
           </div>
         )}
 
-        <div style={{ display: 'none' }}>
-          <Map coordinates={{ lat: hotel.latitude, lng: hotel.longitude }} height="0px" />
-        </div>
-
+        {/* <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLEMAP_API_KEY}> */}
+        {/* I really shouldnt expose this haha */}
+        { !googleApiLoaded && (
+          <LoadScript googleMapsApiKey={"AIzaSyAMA3VTBdscv_40tdyz0X4kfJKPG2i97QM"} onLoad={() => setGoogleApiLoaded(true)} >
+            <div style={{ display: 'none' }}>
+              <Map coordinates={{ lat: hotel.latitude, lng: hotel.longitude }} height="0px" />
+            </div>
+          </LoadScript>
+        )}
         <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-10">
           <h2 className="text-2xl font-bold text-[#0e151b] mb-4">Choose your room</h2>
 
@@ -435,8 +440,7 @@ const HotelDetails = () => {
         </div>
       </div>
     )}
-
-    </LoadScript>
+    </div>
   );
 };
 
