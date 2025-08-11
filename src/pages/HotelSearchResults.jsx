@@ -36,6 +36,11 @@ const HotelSearchResults = () => {
   const checkout = searchParams.get('checkout');
   const guests = parseInt(searchParams.get('guests'), 10);
 
+  // Get search results from navigation state (if available)
+  const navigationState = location.state;
+  const preloadedResults = navigationState?.searchResults;
+  const hasPreloadedResults = navigationState?.hasSearched && preloadedResults;
+
   // Find destination name from uid
   const destEntry = destinations.find((d) => d.uid === destinationId);
   const selectedDestination = destEntry?.term || 'Unknown location';
@@ -113,14 +118,62 @@ const HotelSearchResults = () => {
       setMiniDestId(destId);
     }
     if (!destId) return; // require destination
+
     const activeCheckin = checkinDate;
     const activeCheckout = checkoutDate;
-    setLoading(true);
     setShowGuestPicker(false);
     setShowDestSuggestions(false);
+
     try {
-      // Fetch hotels list
-      const hotelData = await ApiService.getHotels({ destination_id: destId });
+      // Temporarily update URL params for fetchHotels to use
+      const currentUrl = new URL(window.location);
+      const originalDestId = currentUrl.searchParams.get('destination_id');
+      const originalCheckin = currentUrl.searchParams.get('checkin');
+      const originalCheckout = currentUrl.searchParams.get('checkout');
+      const originalGuests = currentUrl.searchParams.get('guests');
+      
+      // Set new search params
+      currentUrl.searchParams.set('destination_id', destId);
+      currentUrl.searchParams.set('checkin', activeCheckin);
+      currentUrl.searchParams.set('checkout', activeCheckout);
+      currentUrl.searchParams.set('guests', formatGuestsParam());
+      
+      // Update URL without page reload
+      window.history.replaceState({}, '', currentUrl);
+      
+      // Call fetchHotels which will use the updated URL params
+      await fetchHotels();
+      
+      // Update display destination name
+      const destName = destinations.find(d => d.uid === destId)?.term || displayDestination;
+      setDisplayDestination(destName);
+      
+      // Commit dates AFTER successful search so UI recalculates nights
+      setCommittedCheckin(activeCheckin);
+      setCommittedCheckout(activeCheckout);
+      setCurrentPage(1);
+    } catch (err) {
+      console.error('Mini search failed:', err);
+      setLoading(false);
+    }
+  };
+      
+  const fetchHotels = async () => {
+    setLoading(true);
+    try {
+      let hotelData;
+      
+      // Use preloaded results if available, otherwise make API call
+      if (hasPreloadedResults) {
+        console.log('Using preloaded search results from navigation state');
+        hotelData = preloadedResults;
+      } else {
+        console.log('No preloaded results, making API call for hotels');
+        // Use ApiService.getHotels for hotel list
+        hotelData = await ApiService.getHotels({ destination_id: destinationId });
+      }
+      
+      // Ensure hotels is always an array
       if (Array.isArray(hotelData)) {
         setHotels(hotelData);
       } else if (hotelData && Array.isArray(hotelData.hotels)) {
@@ -128,28 +181,24 @@ const HotelSearchResults = () => {
       } else {
         setHotels([]);
       }
-      // Build price query with defaults
+
+      // Build price query for initial load
       const priceQuery = {
-        destination_id: destId,
-        checkin: activeCheckin,
-        checkout: activeCheckout,
+        destination_id: destinationId,
+        checkin: checkin,
+        checkout: checkout,
         lang: 'en_US',
         currency: 'SGD',
-        guests: formatGuestsParam(),
+        guests: guests,
         partner_id: 1089,
         landing_page: 'wl-acme-earn',
         product_type: 'earn'
       };
-  await pollPrices(priceQuery);
-      // Update display destination name
-      const destName = destinations.find(d => d.uid === destId)?.term || displayDestination;
-      setDisplayDestination(destName);
-      // Commit dates AFTER successful search so UI recalculates nights
-      setCommittedCheckin(activeCheckin);
-      setCommittedCheckout(activeCheckout);
-      setCurrentPage(1);
+
+      await pollPrices(priceQuery);
     } catch (err) {
-      console.error('Mini search failed:', err);
+      console.error('Failed to fetch hotels:', err);
+      setHotels([]);
     } finally {
       setLoading(false);
     }
@@ -159,44 +208,7 @@ const HotelSearchResults = () => {
   const adjustChildren = (delta) => setChildren(c => Math.min(10, Math.max(0, c + delta)));
   const adjustRooms = (delta) => setRooms(r => Math.min(8, Math.max(1, r + delta)));
 
-  // Fetch hotels and poll for prices when destinationId changes
   useEffect(() => {
-    const fetchHotels = async () => {
-      setLoading(true);
-      try {
-        // Fetch hotel list from API
-        const hotelData = await ApiService.getHotels({ destination_id: destinationId });
-        // Normalize hotel data to array
-        if (Array.isArray(hotelData)) {
-          setHotels(hotelData);
-        } else if (hotelData && Array.isArray(hotelData.hotels)) {
-          setHotels(hotelData.hotels);
-        } else {
-          setHotels([]);
-        }
-
-        // Prepare price query params
-        const priceQuery = {
-          destination_id: destinationId,
-          checkin: checkin,
-          checkout: checkout,
-          lang: 'en_US',
-          currency: 'SGD',
-          guests: guests,
-          partner_id: 1089,
-          landing_page: 'wl-acme-earn',
-          product_type: 'earn'
-        };
-        // Poll price API until completed or max attempts
-        await pollPrices(priceQuery);
-      } catch (err) {
-        console.error('Failed to fetch hotels:', err);
-        setHotels([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchHotels();
     return () => { abortPollRef.current = true; };
   }, [destinationId]);
@@ -236,7 +248,6 @@ const HotelSearchResults = () => {
   // Pagination: slice hotels for current page
   const totalPages = Math.ceil(filteredHotels.length / HOTELS_PER_PAGE);
   const paginatedHotels = filteredHotels.slice((currentPage - 1) * HOTELS_PER_PAGE, currentPage * HOTELS_PER_PAGE);
-  
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
@@ -254,7 +265,7 @@ const HotelSearchResults = () => {
         <h1 className="text-3xl font-bold mb-6">Hotels in {displayDestination}</h1>
       </div>
       {/* Mini Search Bar */}
-  <form onSubmit={handleMiniSearch} className="mb-8 bg-white/90 border border-gray-200 rounded-2xl shadow p-4 md:p-5 flex flex-col gap-4 max-w-[100rem] w-full mx-auto">
+      <form onSubmit={handleMiniSearch} className="mb-8 bg-white/90 border border-gray-200 rounded-2xl shadow p-4 md:p-5 flex flex-col gap-4 max-w-[100rem] w-full mx-auto">
         <div className="flex flex-col md:flex-row gap-4">
           {/* Destination */}
           <div className="relative md:flex-1">
@@ -339,7 +350,7 @@ const HotelSearchResults = () => {
           <h2 className="text-xl font-bold text-black mb-6 flex items-center gap-2"><span className="material-icons align-middle text-gray-400"></span>Filters</h2>
           {/* Star Rating Filter (multi-select) */}
           <div className="mb-6">
-            <label className="block text-sm font-semibold mb-2 text-black flex items-center gap-2">
+            <label className="text-sm font-semibold mb-2 text-black flex items-center gap-2">
               <span className="material-icons text-yellow-400"></span>Star Rating
             </label>
             <div className="flex flex-col gap-2 text-sm">
@@ -375,7 +386,7 @@ const HotelSearchResults = () => {
           </div>
           {/* Price Range Filter (per-night) */}
           <div className="mb-6">
-            <label className="block text-sm font-semibold mb-2 text-black flex items-center gap-2">
+            <label className="text-sm font-semibold mb-2 text-black flex items-center gap-2">
               <span className="material-icons text-green-400"></span>Price Range <span className="text-[11px] font-normal text-gray-500">(per night)</span>
             </label>
             <div className="flex gap-2 items-center">

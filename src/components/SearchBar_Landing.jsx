@@ -19,8 +19,10 @@ const SearchBar_Landing = ({
   const [errors, setErrors] = useState({});
   const [lang] = useState("en_US");
   const [currency] = useState("SGD");
-  const [partner_id] = useState("1")
-  
+  const [partner_id] = useState("1089");
+  const [landing_page] = useState("wl-acme-earn");
+  const [product_type] = useState("earn");
+
   // Destination autocomplete states
   const [searchValue, setSearchValue] = useState("");
   const [searchId, setSearchId] = useState("");
@@ -189,7 +191,9 @@ const SearchBar_Landing = ({
         lang: lang,
         currency: currency,
         guests: guests,
-        partner_id: partner_id
+        partner_id: partner_id,
+        landing_page: landing_page,
+        product_type: product_type
       };
       
       console.log('Search parameters:', searchParams);
@@ -198,7 +202,7 @@ const SearchBar_Landing = ({
       const results = await ApiService.getHotels(searchParams);
       console.log('Hotels search results:', results);
       
-      // Call the parent component's onSearch function
+      // Call the parent component's onSearch function with results
       if (onSearch) {
         onSearch(searchId, results, searchParams);
       }
