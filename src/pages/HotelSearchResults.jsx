@@ -334,12 +334,12 @@ const HotelSearchResults = () => {
       </form>
   <div className="flex flex-col md:flex-row gap-0 md:gap-4 max-w-[100rem] mx-auto">
         {/* Sidebar Filters */}
-  <aside className="w-full md:w-80 bg-white/90 rounded-2xl shadow-lg border border-blue-100 p-6 mb-8 md:mb-0 sticky top-8 h-fit md:mt-12">
+  <aside className="w-full md:w-80 bg-white/90 rounded-2xl shadow-lg border border-gray-200 p-6 mb-8 md:mb-0 sticky top-8 h-fit md:mt-12">
           {/* Filters heading */}
-          <h2 className="text-xl font-bold text-blue-700 mb-6 flex items-center gap-2"><span className="material-icons align-middle text-blue-400"></span>Filters</h2>
+          <h2 className="text-xl font-bold text-black mb-6 flex items-center gap-2"><span className="material-icons align-middle text-gray-400"></span>Filters</h2>
           {/* Star Rating Filter (multi-select) */}
           <div className="mb-6">
-            <label className="block text-sm font-semibold mb-2 text-blue-700 flex items-center gap-2">
+            <label className="block text-sm font-semibold mb-2 text-black flex items-center gap-2">
               <span className="material-icons text-yellow-400"></span>Star Rating
             </label>
             <div className="flex flex-col gap-2 text-sm">
@@ -368,14 +368,14 @@ const HotelSearchResults = () => {
                 <button
                   type="button"
                   onClick={() => setStarFilters([])}
-                  className="text-xs text-blue-600 hover:underline"
+                  className="text-xs text-black hover:underline"
                 >Clear all</button>
               </div>
             </div>
           </div>
           {/* Price Range Filter (per-night) */}
           <div className="mb-6">
-            <label className="block text-sm font-semibold mb-2 text-blue-700 flex items-center gap-2">
+            <label className="block text-sm font-semibold mb-2 text-black flex items-center gap-2">
               <span className="material-icons text-green-400"></span>Price Range <span className="text-[11px] font-normal text-gray-500">(per night)</span>
             </label>
             <div className="flex gap-2 items-center">
@@ -455,7 +455,14 @@ const HotelSearchResults = () => {
                           state={{ nearbyHotels }}
                           onClick={() => console.log("Navigating with hotels:", nearbyHotels)}
                       key={hotel.id || index}
-                      className="rounded-xl overflow-hidden shadow-lg border border-gray-200 bg-white flex hover:shadow-xl transition hover:scale-[1.01] w-full self-center">
+                      className="relative rounded-xl overflow-hidden shadow-lg border border-gray-200 bg-white flex hover:shadow-xl transition hover:scale-[1.01] w-full self-center">
+                      {/* Guest Rating Badge */}
+                      {hotel?.trustyou?.score?.overall && (
+                        <div className="absolute top-3 right-3 z-10 bg-white/85 backdrop-blur-sm border border-blue-200 text-blue-700 rounded-md px-3 py-1 flex items-center gap-2 shadow-sm">
+                          <span className="text-[10px] font-semibold tracking-wide uppercase">Guest Rating</span>
+                          <span className="text-sm font-bold">{(hotel.trustyou.score.overall / 10).toFixed(1)}/10</span>
+                        </div>
+                      )}
                       <div className="relative w-80 h-56 border-r border-gray-300 overflow-hidden flex-shrink-0 bg-gray-100">
                         <img
                           src={imageUrl}
@@ -482,11 +489,11 @@ const HotelSearchResults = () => {
                         </div>
                         <div className="flex flex-col items-end justify-end text-right min-w-[170px]">
                           {perNight !== null && (
-                            <div className="text-blue-600 font-bold text-3xl leading-tight">
+                            <div className="text-black font-bold text-3xl leading-tight">
                               ${perNight.toFixed(0)} <span className="text-base font-medium">/night</span>
                             </div>
                           )}
-                          <div className="text-blue-600 font-semibold text-sm mt-1">{priceText}</div>
+                          <div className="text-black font-semibold text-sm mt-1">{priceText}</div>
                           <button
                             type="button"
                             className="mt-4 w-full px-5 py-3 text-sm font-semibold bg-[#47a6ea] hover:bg-[#3690d4] text-white rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-blue-300 transition"
