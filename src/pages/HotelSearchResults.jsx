@@ -250,10 +250,12 @@ const HotelSearchResults = () => {
   // Render hotel search results UI
   return (
     <div className="p-10">
-      {/* Page heading */}
-  <h1 className="text-3xl font-bold mb-6">Hotels in {displayDestination}</h1>
+      {/* Page heading aligned with search bar */}
+      <div className="max-w-[100rem] mx-auto">
+        <h1 className="text-3xl font-bold mb-6">Hotels in {displayDestination}</h1>
+      </div>
       {/* Mini Search Bar */}
-      <form onSubmit={handleMiniSearch} className="mb-8 bg-white/90 border border-gray-200 rounded-2xl shadow p-4 md:p-5 flex flex-col gap-4">
+  <form onSubmit={handleMiniSearch} className="mb-8 bg-white/90 border border-gray-200 rounded-2xl shadow p-4 md:p-5 flex flex-col gap-4 max-w-[100rem] w-full mx-auto">
         <div className="flex flex-col md:flex-row gap-4">
           {/* Destination */}
           <div className="relative md:flex-1">
@@ -331,9 +333,9 @@ const HotelSearchResults = () => {
           </div>
         </div>
       </form>
-      <div className="flex flex-col md:flex-row gap-8">
+  <div className="flex flex-col md:flex-row gap-0 md:gap-4 max-w-[100rem] mx-auto">
         {/* Sidebar Filters */}
-        <aside className="w-full md:w-72 bg-white/90 rounded-2xl shadow-lg border border-blue-100 p-6 mb-8 md:mb-0 sticky top-8 h-fit">
+  <aside className="w-full md:w-80 bg-white/90 rounded-2xl shadow-lg border border-blue-100 p-6 mb-8 md:mb-0 sticky top-8 h-fit">
           {/* Filters heading */}
           <h2 className="text-xl font-bold text-blue-700 mb-6 flex items-center gap-2"><span className="material-icons align-middle text-blue-400"></span>Filters</h2>
           {/* Star Rating Filter */}
@@ -446,13 +448,16 @@ const HotelSearchResults = () => {
                           state={{ nearbyHotels }}
                           onClick={() => console.log("Navigating with hotels:", nearbyHotels)}
                       key={hotel.id || index}
-                      className="rounded-xl overflow-hidden shadow-lg border border-gray-200 bg-white flex hover:shadow-xl transition hover:scale-[1.01] w-full">
-                      <img
-                        src={imageUrl}
-                        alt={name}
-                        className="w-64 h-48 object-cover border-r border-gray-300"
-                        loading = "lazy"
-                      />
+                      className="rounded-xl overflow-hidden shadow-lg border border-gray-200 bg-white flex hover:shadow-xl transition hover:scale-[1.01] w-full self-center">
+                      <div className="relative w-80 h-56 border-r border-gray-300 overflow-hidden flex-shrink-0 bg-gray-100">
+                        <img
+                          src={imageUrl}
+                          alt={name}
+                          loading="lazy"
+                          onError={(e)=>{ if(!e.currentTarget.dataset.fallback){ e.currentTarget.dataset.fallback='1'; e.currentTarget.src='/hotel.svg'; } }}
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                      </div>
                       <div className="p-6 flex w-full justify-between gap-6">
                         <div className="flex flex-col justify-between">
                           <div>
@@ -468,16 +473,16 @@ const HotelSearchResults = () => {
                             )}
                           </div>
                         </div>
-                        <div className="flex flex-col items-end justify-end text-right min-w-[140px]">
+                        <div className="flex flex-col items-end justify-end text-right min-w-[170px]">
                           {perNight !== null && (
-                            <div className="text-blue-600 font-bold text-2xl leading-tight">
-                              ${perNight.toFixed(0)} <span className="text-sm font-medium">/night</span>
+                            <div className="text-blue-600 font-bold text-3xl leading-tight">
+                              ${perNight.toFixed(0)} <span className="text-base font-medium">/night</span>
                             </div>
                           )}
-                          <div className="text-blue-600 font-semibold text-xs mt-1">{priceText}</div>
+                          <div className="text-blue-600 font-semibold text-sm mt-1">{priceText}</div>
                           <button
                             type="button"
-                            className="mt-3 w-full px-6 py-3 text-sm md:text-base font-semibold bg-[#47a6ea] hover:bg-[#3690d4] text-white rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-blue-300 transition-colors"
+                            className="mt-4 w-full px-5 py-3 text-sm font-semibold bg-[#47a6ea] hover:bg-[#3690d4] text-white rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-blue-300 transition"
                           >
                             Select
                           </button>
