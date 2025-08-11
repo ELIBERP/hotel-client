@@ -5,6 +5,22 @@ import StarRating from '../components/StarRating';
 import { Link, useLocation } from 'react-router-dom';
 import ApiService from '../services/api';
 
+// Amenity icon/label mapping (Material Icons)
+const AMENITY_MAP = {
+  airConditioning: { label: 'A/C', icon: 'ac_unit' },
+  clothingIron: { label: 'Iron', icon: 'iron' },
+  continentalBreakfast: { label: 'Breakfast', icon: 'free_breakfast' },
+  dataPorts: { label: 'Data', icon: 'settings_ethernet' },
+  dryCleaning: { label: 'Dry Cleaning', icon: 'local_laundry_service' },
+  hairDryer: { label: 'Hair Dryer', icon: 'dry' },
+  miniBarInRoom: { label: 'Mini Bar', icon: 'local_bar' },
+  outdoorPool: { label: 'Pool', icon: 'pool' },
+  parkingGarage: { label: 'Parking', icon: 'local_parking' },
+  roomService: { label: 'Room Service', icon: 'room_service' },
+  safe: { label: 'Safe', icon: 'lock' },
+  tVInRoom: { label: 'TV', icon: 'tv' }
+};
+
 // Main hotel search results component
 const HotelSearchResults = () => {
   // Helper: Calculate number of nights between check-in and check-out
@@ -21,6 +37,7 @@ const HotelSearchResults = () => {
   const [priceMin, setPriceMin] = useState(''); // Minimum price filter
   const [priceMax, setPriceMax] = useState(''); // Maximum price filter
   const [priceSort, setPriceSort] = useState(''); // Price sort order
+  const [amenityFilters, setAmenityFilters] = useState([]); // Selected amenity keys
   const [hotels, setHotels] = useState([]); // List of hotels
   const [loading, setLoading] = useState(true); // Loading state
   const [prices, setPrices] = useState([]); // List of hotel prices
@@ -223,6 +240,13 @@ const HotelSearchResults = () => {
   // Filter by price range (per-night values as requested)
   if (priceMin && hotel.perNight < parseFloat(priceMin)) return false;
   if (priceMax && hotel.perNight > parseFloat(priceMax)) return false;
+    // Filter by amenities (AND logic: must include all selected amenities)
+    if (amenityFilters.length > 0) {
+      const am = hotel.amenities || {};
+      for (const key of amenityFilters) {
+        if (!am[key]) return false;
+      }
+    }
     return true;
   });
   // Sort by searchRank descending (default)
@@ -386,6 +410,34 @@ const HotelSearchResults = () => {
               <input type="number" min="0" value={priceMax} onChange={e => setPriceMax(e.target.value)} className="border border-green-200 rounded px-2 py-1 w-20 focus:ring focus:ring-green-100" placeholder="Max" />
             </div>
           </div>
+          {/* Amenities checkboxes (inline, no separate section label) */}
+          <div className="flex flex-col gap-2 pr-1 text-sm mb-6">
+            {Object.entries(AMENITY_MAP).map(([key, meta]) => {
+              const checked = amenityFilters.includes(key);
+              return (
+                <label key={key} className="inline-flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-400"
+                    checked={checked}
+                    aria-label={meta.label}
+                    onChange={() => setAmenityFilters(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key])}
+                  />
+                  <span className={`flex items-center gap-1 ${checked ? 'text-black font-medium' : 'text-gray-600'}`}>
+                    <span className="material-symbols-outlined text-base leading-none">{meta.icon}</span>
+                    {meta.label}
+                  </span>
+                </label>
+              );
+            })}
+            {amenityFilters.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setAmenityFilters([])}
+                className="mt-1 text-xs text-black hover:underline self-start"
+              >Clear amenities</button>
+            )}
+          </div>
           {/* (Sort control moved out of sidebar) */}
         </aside>
         {/* Hotel Listings */}
@@ -463,6 +515,13 @@ const HotelSearchResults = () => {
                           <span className="text-sm font-bold">{(hotel.trustyou.score.overall / 10).toFixed(1)}/10</span>
                         </div>
                       )}
+                      {(priceObj?.free_cancellation || hotel?.free_cancellation) && (
+                        <div className="absolute top-3 left-3 z-10">
+                          <span className="inline-block bg-white/85 backdrop-blur-sm text-green-700 text-[10px] md:text-xs font-semibold px-2 py-1 rounded-md border border-green-200 shadow-sm">
+                            Free cancellation
+                          </span>
+                        </div>
+                      )}
                       <div className="relative w-80 h-56 border-r border-gray-300 overflow-hidden flex-shrink-0 bg-gray-100">
                         <img
                           src={imageUrl}
@@ -478,12 +537,26 @@ const HotelSearchResults = () => {
                             <h2 className="text-2xl font-semibold mb-1">{name}</h2>
                             <p className="text-sm text-gray-600 mb-1">{address}</p>
                             <div className="flex items-center gap-1 text-sm">
-                              <StarRating rating={rating || 0} />
+                              <StarRating rating={rating || 0} size={16} />
                             </div>
-                            {(priceObj?.free_cancellation || hotel?.free_cancellation) && (
-                              <span className="inline-block mt-2 bg-white/70 backdrop-blur-sm text-green-700 text-[10px] md:text-xs font-semibold px-2 py-1 rounded-md border border-green-200">
-                                Free cancellation
-                              </span>
+                            {/* Amenity Badges (all) */}
+                            {hotel?.amenities && (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {Object.entries(AMENITY_MAP).map(([key, meta]) => {
+                                  if (!hotel.amenities[key]) return null;
+                                  return (
+                                    <span
+                                      key={key}
+                                      className="text-[10px] md:text-xs px-2 py-1 rounded-md bg-white/80 border border-gray-200 flex items-center gap-1"
+                                      title={meta.label}
+                                      aria-label={meta.label}
+                                    >
+                                      <span className="material-symbols-outlined text-[14px] leading-none">{meta.icon}</span>
+                                      <span>{meta.label}</span>
+                                    </span>
+                                  );
+                                })}
+                              </div>
                             )}
                           </div>
                         </div>
