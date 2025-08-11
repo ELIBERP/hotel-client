@@ -17,7 +17,7 @@ const HotelSearchResults = () => {
   }
 
   // State variables for filters and data
-  const [starFilter, setStarFilter] = useState(''); // Star rating filter
+  const [starFilters, setStarFilters] = useState([]); // Star rating multi-select (array of numbers)
   const [priceMin, setPriceMin] = useState(''); // Minimum price filter
   const [priceMax, setPriceMax] = useState(''); // Maximum price filter
   const [priceSort, setPriceSort] = useState(''); // Price sort order
@@ -216,10 +216,9 @@ const HotelSearchResults = () => {
   // Apply filters and sorting to hotels
   let filteredHotels = hotelsWithPrice.filter(hotel => {
     // Filter by star rating (bucket fractional ratings so 1.5 counts as 1, 2.5 as 2, etc.)
-    if (starFilter) {
-      const selected = parseInt(starFilter, 10);
+    if (starFilters.length > 0) {
       const hotelBucket = Math.floor((hotel.rating || 0));
-      if (hotelBucket !== selected) return false;
+      if (!starFilters.includes(hotelBucket)) return false;
     }
   // Filter by price range (per-night values as requested)
   if (priceMin && hotel.perNight < parseFloat(priceMin)) return false;
@@ -338,28 +337,40 @@ const HotelSearchResults = () => {
   <aside className="w-full md:w-80 bg-white/90 rounded-2xl shadow-lg border border-blue-100 p-6 mb-8 md:mb-0 sticky top-8 h-fit">
           {/* Filters heading */}
           <h2 className="text-xl font-bold text-blue-700 mb-6 flex items-center gap-2"><span className="material-icons align-middle text-blue-400"></span>Filters</h2>
-          {/* Star Rating Filter */}
+          {/* Star Rating Filter (multi-select) */}
           <div className="mb-6">
             <label className="block text-sm font-semibold mb-2 text-blue-700 flex items-center gap-2">
               <span className="material-icons text-yellow-400"></span>Star Rating
             </label>
-            <div className="flex flex-wrap gap-2">
-              {/* Star rating buttons */}
-              <button
-                className={`px-3 py-1 rounded-full border transition ${starFilter === '' ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-white text-gray-500 border-gray-300 hover:bg-blue-50'}`}
-                onClick={() => setStarFilter('')}
-                style={{ minWidth: 60 }}
-              >All</button>
-              {[1,2,3,4,5].map(star => (
+            <div className="flex flex-col gap-2 text-sm">
+              {[1,2,3,4,5].map(star => {
+                const checked = starFilters.includes(star);
+                return (
+                  <label key={star} className="inline-flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 text-yellow-500 focus:ring-yellow-400"
+                      checked={checked}
+                      aria-label={`${star} star${star>1?'s':''}`}
+                      onChange={() => {
+                        setStarFilters(prev => prev.includes(star) ? prev.filter(s => s !== star) : [...prev, star]);
+                      }}
+                    />
+          <span className="flex items-center gap-1 text-2xl leading-none" aria-hidden="true">
+                      {Array.from({ length: 5 }).map((_, i) => (
+            <span key={i} className={i < star ? (checked ? 'text-yellow-500' : 'text-yellow-400') : 'text-gray-300'}>★</span>
+                      ))}
+                    </span>
+                  </label>
+                );
+              })}
+              <div className="pt-1">
                 <button
-                  key={star}
-                  className={`px-3 py-1 rounded-full border flex items-center gap-1 transition ${starFilter === String(star) ? 'bg-yellow-400 text-white border-yellow-400' : 'bg-white text-gray-500 border-gray-300 hover:bg-yellow-100'}`}
-                  onClick={() => setStarFilter(String(star))}
-                  style={{ minWidth: 60 }}
-                >
-                  <span className="text-lg" role="img" aria-label="star">⭐</span>{star}
-                </button>
-              ))}
+                  type="button"
+                  onClick={() => setStarFilters([])}
+                  className="text-xs text-blue-600 hover:underline"
+                >Clear all</button>
+              </div>
             </div>
           </div>
           {/* Price Range Filter (per-night) */}
