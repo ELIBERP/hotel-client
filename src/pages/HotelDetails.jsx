@@ -11,6 +11,7 @@ import { roomAmenityKeys } from '../constants/amenities';
 import AmenityChip from '../components/AmenityChip';
 import CatHotelImage from '../assets/CatHotelImage.svg';
 import { parseNearby } from '../utils/parseNearby';
+import useOutsideClick from '../hooks/useOutsideClick';
 
 const FALLBACK = CatHotelImage; 
 

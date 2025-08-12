@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:80"
+    # If you need to mount environment files
+    # env_file:
+    #   - .env.production
+    
+  # Uncomment if you need a development service with hot reload
+  # app-dev:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.dev
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./src:/app/src
+  #     - ./public:/app/public
+  #   environment:
+  #     - NODE_ENV=development
