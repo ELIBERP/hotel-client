@@ -2,6 +2,7 @@
 import React from 'react';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
 // Adjust this import path for your project (e.g., '../components/RoomGrid' or '@/components/RoomGrid')
 import RoomGrid from '../../src/components/RoomGrid';
 
@@ -34,19 +35,19 @@ const makeRooms = () => ([
 
 describe('RoomGrid', () => {
   test('shows loading state', () => {
-    render(<RoomGrid rooms={[]} loading={true} onRoomClick={jest.fn()} />);
+    render(<RoomGrid rooms={[]} loading={true} onRoomClick={vi.fn()} />);
     expect(screen.getByText(/Loading room details/i)).toBeInTheDocument();
     expect(screen.queryByText(/No rooms available/i)).not.toBeInTheDocument();
   });
 
   test('shows empty state when no rooms and not loading', () => {
-    render(<RoomGrid rooms={[]} loading={false} onRoomClick={jest.fn()} />);
+    render(<RoomGrid rooms={[]} loading={false} onRoomClick={vi.fn()} />);
     expect(screen.getByText(/No rooms available for selected filter/i)).toBeInTheDocument();
   });
 
   test('renders one card per room with correct titles (and placeholder fallback)', () => {
     const rooms = makeRooms().slice(0, 2);
-    render(<RoomGrid rooms={rooms} loading={false} onRoomClick={jest.fn()} />);
+    render(<RoomGrid rooms={rooms} loading={false} onRoomClick={vi.fn()} />);
 
     // Two buttons => two cards
     const buttons = screen.getAllByRole('button', { name: /View Details/i });
@@ -59,7 +60,7 @@ describe('RoomGrid', () => {
 
   test('image source prefers high_resolution_url and falls back to url', () => {
     const rooms = makeRooms().slice(0, 2);
-    render(<RoomGrid rooms={rooms} loading={false} onRoomClick={jest.fn()} />);
+    render(<RoomGrid rooms={rooms} loading={false} onRoomClick={vi.fn()} />);
 
     // Alt texts are "Room 0", "Room 1"
     const img0 = screen.getByAltText('Room 0');
@@ -71,7 +72,7 @@ describe('RoomGrid', () => {
 
   test('extracts bed and size info from long_description', () => {
     const rooms = makeRooms().slice(0, 2);
-    render(<RoomGrid rooms={rooms} loading={false} onRoomClick={jest.fn()} />);
+    render(<RoomGrid rooms={rooms} loading={false} onRoomClick={vi.fn()} />);
 
     // Card 0 (Deluxe King)
     const card0Heading = screen.getByRole('heading', { name: 'Deluxe King' });
@@ -89,7 +90,7 @@ describe('RoomGrid', () => {
 
   test('maps breakfast text correctly across cases', () => {
     const rooms = makeRooms(); // 3 rooms: No breakfast, Breakfast included, —
-    render(<RoomGrid rooms={rooms} loading={false} onRoomClick={jest.fn()} />);
+    render(<RoomGrid rooms={rooms} loading={false} onRoomClick={vi.fn()} />);
 
     // By order:
     const headings = screen.getAllByRole('heading');
@@ -106,7 +107,7 @@ describe('RoomGrid', () => {
 
   test('shows correct cancellation text', () => {
     const rooms = makeRooms().slice(0, 2); // first true, second false
-    render(<RoomGrid rooms={rooms} loading={false} onRoomClick={jest.fn()} />);
+    render(<RoomGrid rooms={rooms} loading={false} onRoomClick={vi.fn()} />);
 
     const [h0, h1] = screen.getAllByRole('heading');
 
@@ -119,7 +120,7 @@ describe('RoomGrid', () => {
 
   test('renders price with currency only when converted_price is truthy', () => {
     const rooms = makeRooms(); // includes a room with 250, one with undefined, one with 0
-    render(<RoomGrid rooms={rooms} loading={false} onRoomClick={jest.fn()} />);
+    render(<RoomGrid rooms={rooms} loading={false} onRoomClick={vi.fn()} />);
 
     // Card 0 => 250 SGD
     const card0 = screen.getByRole('heading', { name: 'Deluxe King' }).closest('div');
@@ -141,7 +142,7 @@ describe('RoomGrid', () => {
 
   test('calls onRoomClick with the correct room when clicking "View Details"', () => {
     const rooms = makeRooms().slice(0, 2);
-    const onRoomClick = jest.fn();
+    const onRoomClick = vi.fn();
     render(<RoomGrid rooms={rooms} loading={false} onRoomClick={onRoomClick} />);
 
     const buttons = screen.getAllByRole('button', { name: /View Details/i });

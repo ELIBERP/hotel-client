@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test-vitest": "vitest"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.7",
@@ -32,8 +33,9 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
-    "@vitejs/plugin-react": "^4.4.1",
+    "@vitejs/plugin-react": "^4.7.0",
     "@vitejs/plugin-vue": "^6.0.1",
+    "@vitest/ui": "^3.2.4",
     "babel-jest": "^30.0.5",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
@@ -43,7 +45,8 @@
     "jest-environment-jsdom": "^30.0.5",
     "jsdom": "^26.1.0",
     "vite": "^6.3.5",
-    "vite-plugin-env-compatible": "^2.0.1"
+    "vite-plugin-env-compatible": "^2.0.1",
+    "vitest": "^3.2.4"
   },
   "comments": "Jest config moved to jest.config.js"
 }
