@@ -41,7 +41,7 @@ const Footer = () => {
                         </div>
                         </a>
                     </div>
-                    <p className="text-[#4e7997] text-base font-normal leading-normal">@2024 StayEase</p>
+                    <p className="text-[#4e7997] text-base font-normal leading-normal">@2025 StayEase</p>
                     </footer>
                 </div>
             </footer>
