@@ -10,7 +10,7 @@ import React, { useEffect, useState } from 'react';
 import Skeleton from '../components/Skeleton';
 import Spinner from '../components/Spinner';
 
-const MIN_LOADING_MS = 200;
+const MIN_LOADING_MS = 100;
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const HotelHeaderSkeleton = () => (
