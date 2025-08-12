@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ApiService from '../services/api';
 import destinationsData from '../assets/destinations.json';
+import fuzzysort from 'fuzzysort';
 
 const SearchBar_Landing = ({ 
   placeholder = "Where are you going?", 
@@ -32,10 +33,26 @@ const SearchBar_Landing = ({
   const dropdownRef = useRef(null);
   const guestRoomDropdownRef = useRef(null);
 
-  // Handle destination input change with debouncing
+  // Handle destination input change with debouncing + autocorrect
+  const [suggestions, setSuggestions] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  
+  // Reference to popular destinations for prioritizing matches
+  const popularDestinations = useRef([
+    "Singapore", "Tokyo", "London", "Paris", "New York", "Bangkok", "Bali", 
+    "Rome", "Dubai", "Hong Kong", "Seoul", "Barcelona", "Amsterdam", "Sydney", 
+    "Los Angeles", "Miami", "Istanbul", "Las Vegas", "Madrid", "Berlin"
+  ]);
+
   const handleDestinationInputChange = (e) => {
     const newValue = e.target.value;
     setSearchValue(newValue);
+    setIsSearching(true);
+    
+    // If the user is typing something different than what they selected, clear the searchId
+    if (searchId && newValue !== searchValue) {
+      setSearchId("");
+    }
     
     // Clear any existing timer
     if (debounceTimerRef.current) {
@@ -44,8 +61,13 @@ const SearchBar_Landing = ({
 
     // Set a new timer for debounced search
     debounceTimerRef.current = setTimeout(() => {
+      setIsSearching(false);
+      setSuggestions([]); // Reset suggestions
+      
       if (newValue.length >= 2) { // start auto complete search on 2nd input
-        console.log('Searching destinations for:', newValue); // Debug log
+        console.log('Searching destinations for:', newValue);
+        
+        // STEP 1: Look for exact matches first (partial matching)
         const filtered = destinationsData
           .filter(destination => 
             destination && 
@@ -54,15 +76,97 @@ const SearchBar_Landing = ({
             destination.term.toLowerCase().includes(newValue.toLowerCase())
           )
           .slice(0, 10); // limit to 10 results
-        
-        console.log('Found destinations (FROM destinations.json):', filtered.length); // Debug log
+          
+        console.log('Found exact matches:', filtered.length);
         setFilteredDestinations(filtered);
-        setShowDropdown(filtered.length > 0);
+        setShowDropdown(true); // Always show dropdown when searching
+        
+        // STEP 2: If no exact matches, or very few, add fuzzy matching suggestions
+        if (filtered.length < 3) {
+          console.log('Finding fuzzy matches for:', newValue);
+          
+          // Create an index of destinations for faster searching
+          // Focus on top 25,000 destinations for better performance
+          const validDestinations = destinationsData
+            .filter(d => d && d.term && typeof d.term === 'string')
+            .slice(0, 25000);
+          
+          // Prepare data for fuzzysort
+          const preparedDestinations = validDestinations.map(dest => ({
+            original: dest,
+            prepared: fuzzysort.prepare(dest.term)
+          }));
+          
+          // STEP 3: First try to match against popular destinations (higher priority)
+          const popularMatches = [];
+          
+          for (const popularDest of popularDestinations.current) {
+            // Find destinations containing this popular city
+            const matchingDests = validDestinations.filter(d => 
+              d.term.includes(popularDest)
+            ).slice(0, 2); // Just take a couple for each popular city
+            
+            if (matchingDests.length > 0) {
+              popularMatches.push(...matchingDests);
+            }
+          }
+          
+          // Prepare popular destinations for fuzzy search
+          const preparedPopular = popularMatches.map(dest => ({
+            original: dest,
+            prepared: fuzzysort.prepare(dest.term)
+          }));
+          
+          // STEP 4: Perform advanced fuzzy search with fuzzysort
+          
+          // Try popular destinations first (gives better results for common cities)
+          const popularResults = fuzzysort.go(newValue, preparedPopular, {
+            key: 'prepared',
+            allowTypo: true,
+            threshold: -10000, // More permissive threshold
+            limit: 3
+          });
+          
+          // Then try all destinations
+          const fuzzyResults = fuzzysort.go(newValue, preparedDestinations, {
+            key: 'prepared',
+            allowTypo: true,
+            threshold: -5000, // Less permissive for general results
+            limit: 5
+          });
+          
+          console.log('Popular fuzzy results:', popularResults.length);
+          console.log('General fuzzy results:', fuzzyResults.length);
+          
+          // STEP 5: Process and deduplicate results
+          const allResults = [...popularResults, ...fuzzyResults];
+          const uniqueResults = [];
+          const seenTerms = new Set();
+          
+          for (const result of allResults) {
+            const destination = result.obj.original;
+            if (!seenTerms.has(destination.term)) {
+              seenTerms.add(destination.term);
+              uniqueResults.push(destination);
+              
+              // Don't add too many
+              if (uniqueResults.length >= 5) break;
+            }
+          }
+          
+          // Set suggestions for display
+          if (uniqueResults.length > 0) {
+            console.log('Found suggestions:', uniqueResults.map(d => d.term));
+            setSuggestions(uniqueResults);
+          }
+        }
       } else {
+        // Input is too short
         setFilteredDestinations([]);
+        setSuggestions([]);
         setShowDropdown(false);
       }
-    }, 300); // 300ms debounce
+    }, 300);
   };
 
   // Handle dropdown item selection
@@ -71,6 +175,7 @@ const SearchBar_Landing = ({
     setSearchId(destinationId);
     setShowDropdown(false);
     setFilteredDestinations([]);
+    setSuggestions([]);
     
     // Clear destination error if exists
     if (errors.destination) {
@@ -281,11 +386,52 @@ const SearchBar_Landing = ({
             </div>
           )}
           
-          {/* Show "No results found" if typing but no matches */}
-          {showDropdown && filteredDestinations.length === 0 && searchValue.length >= 2 && (
+          {/* Show "No results found" if typing but no matches and no suggestion was selected */}
+          {searchValue.length >= 2 && filteredDestinations.length === 0 && !searchId && (
             <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-b-lg shadow-lg z-50 mt-1">
-              <div className="p-3 text-sm text-gray-500 text-center">
-                No destinations found for "{searchValue}"
+              <div className="p-3 text-sm text-gray-500">
+                {isSearching ? (
+                  <div className="flex justify-center items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                    Searching...
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-center mb-2">No destinations found for "{searchValue}"</div>
+                    {suggestions.length > 0 && (
+                      <div className='mt-3'>
+                        <div className="font-medium text-[#0e151b] text-base border-b pb-2 mb-1">Did you mean:</div>
+                        {suggestions.map((suggestion, index) => (
+                          <div 
+                            key={`suggestion-${index}`}
+                            className="cursor-pointer hover:bg-blue-50 rounded-lg transition-colors"
+                            onClick={() => handleDropdownClick(suggestion.term, suggestion.uid)}
+                          >
+                            <div className="p-3 border-b border-gray-100 flex items-center">
+                              <div className="mr-2 text-blue-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                  <circle cx="12" cy="10" r="3"></circle>
+                                </svg>
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-medium text-[#0e151b]">{suggestion.term}</div>
+                                {suggestion.region && (
+                                  <div className="text-xs text-[#4e7997]">{suggestion.region}</div>
+                                )}
+                              </div>
+                              <div className="ml-2 text-blue-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                  <path fillRule="evenodd" d="M4 8a.5.5 0 0 1 .5-.5h5.793L8.146 5.354a.5.5 0 1 1 .708-.708l3 3a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708-.708L10.293 8.5H4.5A.5.5 0 0 1 4 8z"/>
+                                </svg>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           )}

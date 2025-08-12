@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import ApiService from '../services/api';
 import Map from '../components/Map';
@@ -7,14 +6,82 @@ import RoomGrid from '../components/RoomGrid';
 import { LoadScript } from '@react-google-maps/api';
 import { useRef } from 'react';
 import useOutsideClick from '../hooks/useOutsideClick';
+import React, { useEffect, useState } from 'react';
+import Skeleton from '../components/Skeleton';
+import Spinner from '../components/Spinner';
+import { roomAmenityKeys } from '../constants/amenities';
+import AmenityChip from '../components/AmenityChip';
+import CatHotelImage from '../assets/CatHotelImage.svg';
+import { parseNearby } from '../utils/parseNearby';
+
+const FALLBACK = CatHotelImage; 
+
+const formatBreakfast = (code) => {
+  switch (code) {
+    case 'hotel_detail_room_only':
+      return 'Not included';
+    case 'hotel_detail_breakfast_included':
+      return 'Included';
+    case 'hotel_detail_breakfast_available':
+    case 'hotel_detail_breakfast_optional':
+      return 'Available (extra charge)';
+    default:
+      return 'Not included';
+  }
+};
+
+const HotelHeaderSkeleton = () => (
+  <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-6">
+    <div className="w-full border-b border-gray-200 bg-white mb-6">
+      <div className="w-full px-6 sm:px-16 py-4 bg-[#f2f2f4] rounded-xl shadow-sm">
+        <Skeleton className="h-10 w-full rounded-lg" />
+      </div>
+    </div>
+
+    <Skeleton className="h-8 w-64 mb-6 rounded" />
+
+    <div className="flex flex-col md:flex-row gap-8 mb-6">
+      <Skeleton className="w-full md:w-[600px] h-[350px] rounded-xl" />
+      <div className="flex flex-col md:w-1/2 gap-3">
+        <Skeleton className="h-6 w-48 rounded" />
+        <Skeleton className="h-4 w-56 rounded" />
+        <Skeleton className="h-4 w-5/6 rounded" />
+        <Skeleton className="h-4 w-4/6 rounded" />
+        <Skeleton className="h-4 w-3/6 rounded" />
+        <div className="mt-2">
+          <Skeleton className="h-4 w-36 rounded" />
+        </div>
+      </div>
+    </div>
+
+   
+  </div>
+);
+
+const RoomGridSkeleton = ({ count = 6 }) => (
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    {Array.from({ length: count }).map((_, i) => (
+      <div key={i} className="rounded-xl border bg-white p-4 shadow-sm">
+        <Skeleton className="w-full h-40 rounded-lg mb-3" />
+        <Skeleton className="h-5 w-3/4 rounded mb-2" />
+        <Skeleton className="h-4 w-2/3 rounded mb-2" />
+        <Skeleton className="h-4 w-1/2 rounded mb-4" />
+        <div className="flex justify-end">
+          <Skeleton className="h-9 w-28 rounded-full" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
 
 
 const HotelDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const [hotelAmenityKeys, setHotelAmenityKeys] = useState([]);   // for icons under the description
+  const [roomHideKeys, setRoomHideKeys] = useState(new Set());    // common across all rooms
   const nearbyHotels = location.state?.nearbyHotels || [];
-  console.log("Nearby hotels received:", nearbyHotels);
   const mapModalRef = useRef(null);
   const descModalRef = useRef(null);
   const [hotel, setHotel] = useState(null);
@@ -35,6 +102,7 @@ const HotelDetails = () => {
     nights: 0,
     price: 0,
   });
+  const [googleApiLoaded, setGoogleApiLoaded] = useState(false); // State to track if Google Maps API is loaded
 
   // Get query parameters from the URL
   const queryParams = new URLSearchParams(location.search);
@@ -46,7 +114,6 @@ const HotelDetails = () => {
   //const country_code = queryParams.get('country_code');
   const country_code = 'SG';
   const lang = queryParams.get('lang');
-
   // Validate required query parameters
   if (!destination_id || !checkin || !checkout || !guests || !currency || !country_code || !lang) {
     return <div>Error: Missing required query parameters</div>;
@@ -68,7 +135,6 @@ const HotelDetails = () => {
     if (selectedFilter === 'all') return true;
     if (selectedFilter === '1') return bedCount === 1;
     if (selectedFilter === '2') return bedCount === 2;  
-
     return true;
   });
 
@@ -78,6 +144,12 @@ const HotelDetails = () => {
   useOutsideClick(descModalRef, () => setShowDescriptionModal(false)); // Hotel Desc popup
   useOutsideClick(roomModalRef, () => setSelectedRoom(null)); // Room Detail popup
 
+  useEffect(() => { //for scroll lock
+  document.body.style.overflow = showDescriptionModal ? 'hidden' : '';
+  return () => {
+    document.body.style.overflow = '';
+  };
+}, [showDescriptionModal]);
 
   // for page refresh when choosing another hotel under recommendation
   useEffect(() => {
@@ -105,30 +177,30 @@ const HotelDetails = () => {
 
 
   // This is the real data. But sometimes unable to take it from feature 2
-  // const handleBookSelectedRoom = (room) => {
-  //   const nights = Math.ceil((new Date(checkout) - new Date(checkin)) / (1000 * 3600 * 24));
-  //   const selectedDetails = {
-  //     name: hotel?.name || '',
-  //     room: room.roomDescription,
-  //     checkIn: checkin,
-  //     checkOut: checkout,
-  //     guests: guests,
-  //     nights: nights,
-  //     price: room.converted_price || 500,
-  //   };
+  const handleBookSelectedRoom = (room) => {
+    const nights = Math.ceil((new Date(checkout) - new Date(checkin)) / (1000 * 3600 * 24));
+    const selectedDetails = {
+      name: hotel?.name || '',
+      room: room.roomDescription,
+      checkIn: checkin,
+      checkOut: checkout,
+      guests: guests,
+      nights: nights,
+      price: room.converted_price || 500,
+    };
 
     // MOCK DATA for KY
-    const handleBookSelectedRoom = (room) => {
-      const nights = 2;
-      const selectedDetails = {
-      name: "ibis budget Singapore Selegie",
-      room: "Superior Room, 2 Twin Beds",
-      checkIn: "2025-08-29",
-      checkOut: "2025-08-31",
-      guests: 2,
-      nights: 2,
-      price: 321.22,
-    };
+    // const handleBookSelectedRoom = (room) => {
+    //   const nights = 2;
+    //   const selectedDetails = {
+    //   name: "ibis budget Singapore Selegie",
+    //   room: "Superior Room, 2 Twin Beds",
+    //   checkIn: "2025-08-29",
+    //   checkOut: "2025-08-31",
+    //   guests: 2,
+    //   nights: 2,
+    //   price: 321.22,
+    // };
 
     navigate('/booking', { state: { hotelDetails: selectedDetails } });
   };
@@ -139,49 +211,136 @@ const HotelDetails = () => {
   };
 
   useEffect(() => {
-    // First API call: get hotel details and images
-    ApiService.getHotelById(id)
-      .then((data) => {
-        setHotel(data);
+    let cancelled = false;
 
-        const { prefix, suffix } = data.image_details;
-        const indices = data.hires_image_index
-          .split(',')
-          .map((str) => str.trim())
-          .filter((str) => str !== '');
+    const load = async () => {
+      // Immediately reset UI so old details don't flash
+      setShowDescriptionModal(false);
+      setHotel(null);          // triggers your skeleton + spinner
+      setImages([]);
+      setRooms([]);
+      setLoadingRooms(true);
 
-        const imageUrls = indices.map((index) => `${prefix}${index}${suffix}`);
+      // Build query once
+      const query = {
+        destination_id,
+        checkin,
+        checkout,
+        guests,
+        currency,
+        country_code,
+        lang,
+        partner_id: 1,
+      };
+
+      try {
+        // Fetch both in parallel
+        const [hotelData, roomsData] = await Promise.all([
+          ApiService.getHotelById(id),
+          ApiService.getHotelRoomsByID(id, query),
+        ]);
+        if (cancelled) return;
+
+        // Prepare images safely
+        // images (safe)
+        const prefix = hotelData?.image_details?.prefix || '';
+        const suffix = hotelData?.image_details?.suffix || '';
+        const hires  = typeof hotelData?.hires_image_index === 'string' ? hotelData.hires_image_index : '';
+        const indices = hires.split(',').map(s => s.trim()).filter(Boolean);
+        const imageUrls = (prefix && suffix) ? indices.map(i => `${prefix}${i}${suffix}`) : [];
+
+        // rooms + annotate with important amenity keys (handles null/undefined/[])
+        const rawRooms = Array.isArray(roomsData?.rooms) ? roomsData.rooms : [];
+        const roomsWithAmenityKeys = rawRooms.map(r => ({
+          ...r,
+          importantAmenityKeys: roomAmenityKeys(r?.amenities), // -> ['wifi','hairDryer',...]
+        }));
+
+        // keys common across all rooms (empty Set if none/rooms=[])
+        const commonAcrossRooms = roomsWithAmenityKeys.length
+          ? roomsWithAmenityKeys
+              .map(r => new Set(r.importantAmenityKeys || []))
+              .reduce((acc, set) => {
+                if (!acc) return set;
+                return new Set([...acc].filter(k => set.has(k)));
+              }, null)
+          : new Set();
+
+        // hotel-level booleans you want to show (from /hotels/:id)
+        const a = hotelData?.amenities || {};
+        const hotelBooleanKeys = [
+          a.continentalBreakfast ? 'continentalBreakfast' : null,
+          a.parkingGarage ? 'parkingGarage' : null,
+          a.dryCleaning ? 'dryCleaning' : null,
+        ].filter(Boolean);
+
+        // final hotel icon keys: hotel booleans + anything common to all rooms
+        const hotelKeys = Array.from(new Set([...hotelBooleanKeys, ...commonAcrossRooms]));
+   
+        // hydrate UI
+        setHotel(hotelData);
         setImages(imageUrls);
-      })
-      .catch((err) => console.error(err));
-
-    // Second API call: get hotel rooms with dynamic query
-    const query = {
-      destination_id,
-      checkin,
-      checkout,
-      guests,
-      currency,
-      country_code,
-      lang,
-      partner_id: 1, // Static partner_id
+        setRooms(roomsWithAmenityKeys);
+        setHotelAmenityKeys(hotelKeys);
+        setRoomHideKeys(new Set(hotelBooleanKeys));
+        console.log('hotelAmenityKeys', hotelAmenityKeys);
+        console.log('roomHideKeys', Array.from(roomHideKeys || []));
+        console.log('roomsWithAmenityKeys', roomsWithAmenityKeys.map(r => r.importantAmenityKeys));
+      } catch (err) {
+        if (!cancelled) console.error(err);
+      } finally {
+        if (!cancelled) setLoadingRooms(false);
+      }
     };
 
-    ApiService.getHotelRoomsByID(id, query)
-      .then((data) => {
-        setRooms(data.rooms);
-      })
-      .catch((err) => console.error(err))
-      .finally(() => {
-        setLoadingRooms(false);
-      });
-
+    load();
+    return () => { cancelled = true; };
   }, [id, destination_id, checkin, checkout, guests, currency, country_code, lang]);
 
-  if (!hotel) return <div>Loading hotel details...</div>;
+  const longHtml = hotel?.long_description || hotel?.description || '';
+  const nearby = React.useMemo(() => parseNearby(longHtml), [longHtml]);
 
+  // Convert HTML to readable text (replace <br> with newlines, strip tags)
+const htmlToText = (html) => {
+  if (!html) return '';
+  const div = document.createElement('div');
+  div.innerHTML = html.replace(/<br\s*\/?>/gi, '\n');
+  return (div.textContent || '').trim();
+};
+
+// Keep only the “about” paragraph(s), drop the distances/airports block
+const aboutOnlyHtml = longHtml.split(/Distances are displayed/i)[0] || longHtml;
+const aboutText = htmlToText(aboutOnlyHtml);
+
+// Main image w/ fallback
+const firstImage = Array.isArray(images) && images[0] ? images[0] : null;
+const mainImageUrl = firstImage || FALLBACK;
+
+  if (!hotel) {
+    return (
+      <div className="animate-fade-in relative min-h-[70vh]">
+        {/* Centered spinner overlay */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+            <Spinner size={36} className="text-blue-500" />
+        </div>
+
+        <HotelHeaderSkeleton />
+        <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-10">
+          <h2 className="text-2xl font-bold text-[#0e151b] mb-4">Choose your room</h2>
+          <div className="flex gap-4 mb-6">
+            <Skeleton className="h-9 w-28 rounded-full" />
+            <Skeleton className="h-9 w-24 rounded-full" />
+            <Skeleton className="h-9 w-24 rounded-full" />
+          </div>
+          <RoomGridSkeleton count={6} />
+        </div>
+      </div>
+    );
+    
+  }
+  
   return (
-    <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLEMAP_API_KEY}>
+    <div>
       <div>
         <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-6">
           <div className="w-full border-b border-gray-200 bg-white mb-6">
@@ -198,51 +357,116 @@ const HotelDetails = () => {
           </div>
           <h1 className="text-2xl font-bold text-[#0e151b] mb-6">{hotel.name}</h1>
           <div className="flex flex-col md:flex-row gap-8 mb-6">
-            <img
-              src={images[0]}
-              alt="Main Hotel View"
-              className="rounded-xl w-full md:w-[600px] h-[350px] object-cover"
-            />
+            <div className="rounded-xl w-full md:w-[600px] h-[350px] overflow-hidden">
+              <img
+                src={mainImageUrl}
+                alt="Main Hotel View"
+                className="w-full h-full object-cover"
+                loading="lazy"
+                onError={(e) => {
+                  e.currentTarget.onerror = null; // prevent loop
+                  e.currentTarget.src = FALLBACK;
+                }}
+              />
+            </div>
+
             <div className="flex flex-col justify-start md:w-1/2">
               <h2 className="text-xl font-semibold text-[#0e151b] mb-2">About this place</h2>
-              <button
-                onClick={() => setShowMapModal(true)}
-                className="text-sm text-[#1a73e8] underline mb-2 text-left"
-              >
-                📍 {hotel.address}
-              </button>
-              <p className="text-sm text-[#0e151b] leading-relaxed max-w-lg">
-                {hotel.description?.split('. ').slice(0, 3).join('. ') + '.'}
-              </p>
+
+              {hotel.address ? (
+                <button
+                  onClick={() => setShowMapModal(true)}
+                  className="text-sm text-[#1a73e8] underline mb-2 text-left"
+                >
+                  📍 {hotel.address}
+                </button>
+              ) : (
+                <Skeleton className="h-4 w-56 rounded mb-2" />
+              )}
+
+              {hotel.description ? (
+                <p className="text-sm text-[#0e151b] leading-relaxed max-w-lg">
+                  {hotel.description.split('. ').slice(0, 3).join('. ') + '.'}
+                </p>
+              ) : (
+                <>
+                  <Skeleton className="h-4 w-5/6 rounded mb-2" />
+                  <Skeleton className="h-4 w-4/6 rounded mb-2" />
+                  <Skeleton className="h-4 w-3/6 rounded" />
+                </>
+              )}
               <button
                 onClick={() => setShowDescriptionModal(true)}
                 className="mt-2 text-sm text-[#1a73e8] underline self-start"
               >
                 View more details...
               </button>
+
+              {hotelAmenityKeys.length > 0 && (
+                <section className="mt-6">
+                  <h3 className="text-xl font-semibold text-[#0e151b] mb-2">Hotel Amenities</h3>
+                  <div className="flex flex-wrap gap-2" aria-label="Hotel amenities">
+                    {hotelAmenityKeys.map(k => <AmenityChip key={k} k={k} size="lg" />)}
+                  </div>
+                </section>
+              
+              )}
+              
             </div>
           </div>
-          <div className="flex gap-4 overflow-x-auto py-4">
-            {images.map((url, idx) => (
-              <img
-                key={idx}
-                src={url}
-                alt={`Hotel image ${idx + 1}`}
-                className="w-48 h-32 object-cover rounded-xl flex-shrink-0"
-              />
-            ))}
-          </div>
+
+          {images.length > 0 && (
+            <div className="flex gap-4 overflow-x-auto py-4">
+              {images.map((url, idx) => (
+                <img
+                  key={idx}
+                  src={url || CatHotelImage}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = CatHotelImage;
+                  }}
+                  alt={`Hotel image ${idx + 1}`}
+                  className="w-48 h-32 object-cover rounded-xl flex-shrink-0"
+                  loading="lazy"
+                />
+              ))}
+            </div>
+          )}
+          
         </div>
         {showDescriptionModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div 
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div
               ref={descModalRef}
-              className="bg-white rounded-xl p-6 max-w-lg w-full mx-4"
+              className="bg-white rounded-xl w-full max-w-lg max-h-[85vh] overflow-y-auto p-6" 
             >
               <h2 className="text-xl font-semibold mb-4">Full Description</h2>
+
+              {/* Cleaned description (no <br> spam) */}
               <p className="text-sm text-[#0e151b] leading-relaxed whitespace-pre-line">
-                {hotel.description}
+                {aboutText}
               </p>
+
+              {/* What's nearby (POIs only; airports already filtered by parseNearby) */}
+              {nearby.pois.length > 0 && (
+                <section className="mt-6">
+                  <h3 className="text-lg font-semibold text-[#0e151b] mb-2">What’s nearby</h3>
+                  <ul className="space-y-1">
+                    {nearby.pois.slice(0, 12).map((p, i) => (
+                      <li key={`poi-${i}`} className="text-sm text-gray-700 flex items-start gap-2">
+                        <span className="material-symbols-outlined text-[18px] leading-none mt-[2px]">
+                          place
+                        </span>
+                        <span>
+                          {p.name}{' '}
+                          <span className="text-gray-500">— {p.km} km / {p.mi} mi</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
               <div className="mt-6 text-right">
                 <button
                   onClick={() => setShowDescriptionModal(false)}
@@ -255,10 +479,20 @@ const HotelDetails = () => {
           </div>
         )}
 
-        <div style={{ display: 'none' }}>
-          <Map coordinates={{ lat: hotel.latitude, lng: hotel.longitude }} height="0px" />
-        </div>
-
+        {/* <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLEMAP_API_KEY}> */}
+        {/* I really shouldnt expose this haha */}
+        {!googleApiLoaded && (
+          <LoadScript
+            googleMapsApiKey={import.meta.env.VITE_GOOGLEMAP_API_KEY}
+            onLoad={() => setGoogleApiLoaded(true)}
+            loadingElement={<></>}         // 👈 hides the default "Loading..."
+            // or: loading={<></>}         // 👈 if your version uses `loading`
+          >
+            <div style={{ display: 'none' }}>
+              <Map coordinates={{ lat: hotel.latitude, lng: hotel.longitude }} height="0px" />
+            </div>
+          </LoadScript>
+        )}
         <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-10">
           <h2 className="text-2xl font-bold text-[#0e151b] mb-4">Choose your room</h2>
 
@@ -278,17 +512,23 @@ const HotelDetails = () => {
           </div>
 
           {/* Grid of Room Cards */}
-          <RoomGrid 
-            rooms={filteredRooms} 
-            loading={loadingRooms} 
-            onRoomClick={(room) => setSelectedRoom(room)} 
-          />
+          {loadingRooms ? (
+            <RoomGridSkeleton count={6} />
+          ) : (
+            <RoomGrid
+              rooms={filteredRooms}
+              loading={loadingRooms}
+              onRoomClick={(room) => setSelectedRoom(room)} 
+              roomHideKeys={roomHideKeys}
+              
+            />
+          )}
         </div>
 
 
 
         {showMapModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto p-4">
           <div 
             ref={mapModalRef}
             className="bg-white rounded-xl p-4 max-w-3xl w-full mx-4 relative"
@@ -345,9 +585,7 @@ const HotelDetails = () => {
             {/* Breakfast Info */}
             <p className="text-sm mb-4">
               <strong>Breakfast:</strong>{' '}
-              {selectedRoom.roomAdditionalInfo?.breakfastInfo === 'hotel_detail_room_only'
-                ? 'Not included'
-                : selectedRoom.roomAdditionalInfo?.breakfastInfo || '—'}
+              {formatBreakfast(selectedRoom?.roomAdditionalInfo?.breakfastInfo)}
             </p>
 
             {/* Optional Display Fields (Safe) */}
@@ -395,48 +633,52 @@ const HotelDetails = () => {
       )}
       </div>
       {nearbyHotels.length > 1 && (
-      <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-10">
-        <h2 className="text-2xl font-bold text-[#0e151b] mb-4">Other Hotels You Might Like</h2>
-        <div className="flex overflow-x-auto gap-4 [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {nearbyHotels
-            .filter(h => String(h.id) !== String(id)) // Exclude the current hotel
-            .slice(0, 3) // Limit to 3 hotels
-            .map(hotel => {
-              const imageUrl = hotel.image_details?.prefix && hotel.hires_image_index
-                ? `${hotel.image_details.prefix}${hotel.hires_image_index.split(',')[0].trim()}${hotel.image_details.suffix}`
-                : 'https://dummyimage.com/400x300/cccccc/000000&text=No+Image';
+        <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-10">
+          <h2 className="text-2xl font-bold text-[#0e151b] mb-4">Other Hotels You Might Like</h2>
+          <div className="flex overflow-x-auto gap-4 [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {nearbyHotels
+              .filter(h => String(h.id) !== String(id))
+              .slice(0, 3)
+              .map(hotel => {
+                const firstIndex = hotel.hires_image_index?.split(',')[0]?.trim();
+                const primary = (hotel.image_details?.prefix && firstIndex)
+                  ? `${hotel.image_details.prefix}${firstIndex}${hotel.image_details.suffix}`
+                  : null;
 
-              return (
-                <div
-                  key={hotel.id}
-                  onClick={() =>
-                    navigate(`/hotels/${hotel.id}${location.search}`, {
-                      state: { nearbyHotels },
-                    })
-                  }
-                  className="cursor-pointer flex flex-col gap-2 min-w-[220px] rounded-lg shadow-md bg-white hover:shadow-lg transition-shadow duration-200"
-                >
+                // Stack backgrounds: primary first, fallback second
+                const bg = primary
+                  ? `url("${primary}"), url("${CatHotelImage}")`
+                  : `url("${CatHotelImage}")`;
+
+                return (
                   <div
-                    className="w-full aspect-video bg-cover bg-center rounded-t-lg"
-                    style={{ backgroundImage: `url(${imageUrl})` }}
-                  />
-                  <div className="p-4">
-                    <p className="text-[#111518] font-medium text-base hover:underline">
-                      {hotel.name}
-                    </p>
-                    <p className="text-[#637888] text-sm">
-                      From ${hotel.price || '—'} · Rating: {hotel.rating || 'N/A'}
-                    </p>
+                    key={hotel.id}
+                    onClick={() =>
+                      navigate(`/hotels/${hotel.id}${location.search}`, {
+                        state: { nearbyHotels },
+                      })
+                    }
+                    className="cursor-pointer flex flex-col gap-2 min-w-[220px] rounded-lg shadow-md bg-white hover:shadow-lg transition-shadow duration-200"
+                  >
+                    <div
+                      className="w-full aspect-video bg-cover bg-center rounded-t-lg"
+                      style={{ backgroundImage: bg }}
+                    />
+                    <div className="p-4">
+                      <p className="text-[#111518] font-medium text-base hover:underline">
+                        {hotel.name}
+                      </p>
+                      <p className="text-[#637888] text-sm">
+                        From ${hotel.price || '—'} · Rating: {hotel.rating || 'N/A'}
+                      </p>
+                    </div>
                   </div>
-                </div>
-
-              );
-            })}
+                );
+              })}
+          </div>
         </div>
-      </div>
-    )}
-
-    </LoadScript>
+      )}
+    </div>
   );
 };
 
