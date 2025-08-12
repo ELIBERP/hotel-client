@@ -185,7 +185,7 @@ const HotelDetails = () => {
       currency: currency || 'SGD',
     };
 
-    navigate('/booking', { state: { hotelDetails: selectedDetails } });
+    navigate('/booking-form', { state: { hotelDetails: selectedDetails } });
   };
 
   useEffect(() => {

@@ -120,7 +120,7 @@ describe('HotelDetails Page Tests', () => {
       fireEvent.click(bookNowButton);
 
       // Check if the navigate function is called
-      expect(navigate).toHaveBeenCalledWith('/booking', expect.any(Object));
+      expect(navigate).toHaveBeenCalledWith('/booking-form', expect.any(Object));
     });
   });
 });
