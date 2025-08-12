@@ -12,10 +12,8 @@ import HotelDetails from "./pages/HotelDetails";
 import HotelSearchResults from './pages/HotelSearchResults';
 import BookingSuccess from "./pages/BookingSuccess";
 import BookingCancel from "./pages/BookingCancel";
-import TestPayment from "./pages/TestPayment";
 import BookingForm from "./pages/BookingForm";
-import BookingDemo from "./pages/BookingDemo";
-import CreateBooking from "./pages/CreateBooking";
+import FindBooking from "./pages/FindBooking";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import { logEnvironmentInfo } from "./config/env";
@@ -41,19 +39,10 @@ const App = () => {
                 <Route path="/search" element={<HotelSearchResults />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
-                <Route 
-                  path="/booking" 
-                  element={
-                    <ProtectedRoute>
-                      <CreateBooking />
-                    </ProtectedRoute>
-                  } 
-                />
                 <Route path="/booking-form" element={<BookingForm />} />
-                <Route path="/booking-demo" element={<BookingDemo />} />
-                <Route path="/test-payment" element={<TestPayment />} />
                 <Route path="/booking-success" element={<BookingSuccess />} />
                 <Route path="/booking-cancel" element={<BookingCancel />} />
+                <Route path="/find-booking" element={<FindBooking />} />
               </Routes>
             </main>
             <Footer />

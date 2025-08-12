@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { buildApiUrl } from '../config/env';
 import { convertFromSGD } from '../utils/currency';
+import ApiService from '../services/api';
 
 const PaymentButton = ({ bookingData, isSubmitting, onBeforePayment }) => {
   const [loading, setLoading] = useState(false);
@@ -14,14 +15,13 @@ const PaymentButton = ({ bookingData, isSubmitting, onBeforePayment }) => {
 
   const handlePayment = async () => {
     setLoading(true);
+    
     try {
-      // If there's a pre-payment callback (like creating the booking), call it first
-      if (onBeforePayment) {
-        await onBeforePayment();
-      }
-
+      // 🔧 FIX: Removed onBeforePayment call to prevent duplicate booking creation
+      // The booking will only be created after successful payment via webhook
+      
       const apiUrl = buildApiUrl('/api/bookings/create-payment-session');
-      console.log('🔍 API URL being called:', apiUrl);
+      console.log('API URL being called:', apiUrl);
       
       // Convert SGD amount to target currency for Stripe
       const currency = bookingData.currency || 'SGD';
@@ -29,44 +29,62 @@ const PaymentButton = ({ bookingData, isSubmitting, onBeforePayment }) => {
         ? bookingData.totalAmount 
         : convertFromSGD(bookingData.totalAmount, currency);
       
-      console.log(`💱 Currency conversion: SGD ${bookingData.totalAmount} → ${currency} ${convertedAmount}`);
+      console.log(`Currency conversion: SGD ${bookingData.totalAmount} → ${currency} ${convertedAmount}`);
+      
+      // Debug: Check if we have a valid JWT token before making the request
+      const authToken = ApiService.getAuthToken();
+      // console.log('Auth token check before payment:', {
+      //   hasToken: !!authToken,
+      //   tokenLength: authToken ? authToken.length : 0,
+      //   tokenPreview: authToken ? `${authToken.substring(0, 20)}...` : 'null'
+      // });
+      
+      if (!authToken) {
+        throw new Error('No authentication token found. Please login again.');
+      }
       
       const requestData = {
-        hotelName: bookingData.hotelName,
-        roomType: bookingData.roomType,
-        checkInDate: bookingData.checkInDate,
-        checkOutDate: bookingData.checkOutDate,
-        numberOfGuests: bookingData.numberOfGuests,
-        pricePerNight: bookingData.pricePerNight,
-        numberOfNights: bookingData.numberOfNights,
-        totalAmount: convertedAmount, // Use CONVERTED amount for Stripe
-        bookingId: bookingData.bookingId || bookingData.id,
-        currency: currency.toLowerCase(), // Pass currency to backend
+        // Backend expects these exact field names
+        hotel_id: bookingData.hotelId,
+        hotel_name: bookingData.hotelName,
+        room_type: bookingData.roomType,
+        start_date: bookingData.checkInDate,
+        end_date: bookingData.checkOutDate,
+        nights: bookingData.numberOfNights,
+        adults: bookingData.numberOfGuests,
+        children: 0,
+        total_price: convertedAmount, 
+        currency: currency.toLowerCase(), 
+        first_name: bookingData.firstName,
+        last_name: bookingData.lastName,
+        phone: bookingData.phoneNumber,
+        special_requests: bookingData.specialRequests || ''
       };
       
-      console.log('📤 Request data:', requestData);
+      console.log('Request data:', requestData);
       
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${ApiService.getAuthToken()}`,
         },
         body: JSON.stringify(requestData),
       });
 
-      console.log('📨 Response status:', response.status);
+      console.log('Response status:', response.status);
 
       const data = await response.json();
-      console.log('📨 Response data:', data);
+      console.log('Response data:', data);
       
-      if (data.url) {
-        console.log('✅ Redirecting to Stripe Checkout:', data.url);
-        window.location.href = data.url;
+      if (data.payment_url) {
+        console.log('Redirecting to Stripe Checkout:', data.payment_url);
+        window.location.href = data.payment_url;
       } else {
-        throw new Error(data.error || 'Failed to create payment session');
+        throw new Error(data.message || data.error || 'Failed to create payment session');
       }
     } catch (error) {
-      console.error('💥 Payment error:', error);
+      console.error('Payment error:', error);
       alert('Payment failed: ' + error.message);
     } finally {
       setLoading(false);
@@ -90,7 +108,7 @@ const PaymentButton = ({ bookingData, isSubmitting, onBeforePayment }) => {
           {isSubmitting ? 'Creating Booking...' : 'Processing...'}
         </>
       ) : (
-        `💳 Proceed to Payment`
+        `Proceed to Payment`
       )}
     </button>
   );

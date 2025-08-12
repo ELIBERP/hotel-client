@@ -19,14 +19,39 @@ class ApiService {
     localStorage.setItem('authToken', token);
   }
 
+  // Check if user is authenticated
+  isAuthenticated() {
+    const token = this.getAuthToken();
+    const user = localStorage.getItem('user');
+    return !!(token && user);
+  }
+
+  // Get current user
+  getCurrentUser() {
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
+  }
+
+  // Store user data after login/register
+  setUserData(userData) {
+    localStorage.setItem('user', JSON.stringify(userData.user));
+    // Store JWT token if it exists
+    if (userData.token) {
+      this.setAuthToken(userData.token);
+    }
+  }
+
   // Remove JWT token from localStorage
   removeAuthToken() {
     localStorage.removeItem('authToken');
   }
 
-  // Check if user is authenticated
-  isAuthenticated() {
-    return !!this.getAuthToken();
+  // Logout user
+  logout() {
+    this.removeAuthToken();
+    localStorage.removeItem('user');
+    localStorage.removeItem('authenticated');
+    return Promise.resolve(); // Return a resolved promise for consistency
   }
 
   // Generic request method with timeout, JWT auth, and better error handling
@@ -134,45 +159,27 @@ class ApiService {
 
   
 
+  // Booking methods (Protected routes - require JWT authentication)
   async createBooking(bookingData) {
-    return this.post(getApiEndpoint('bookings'), bookingData);
-  }
+    try {
+      if (!this.isAuthenticated()) {
+        throw new Error('Please login to create a booking');
+      }
 
-  // Authentication methods
-  async register(userData) {
-    return this.post('auth/register', userData);
-  }
+      // Send bookingData 
+      const response = await this.request('/bookings', {
+        method: 'POST',
+        body: JSON.stringify(bookingData), 
+      });
 
-  async login(credentials) {
-    return this.post('auth/login', credentials);
-  }
-
-  async logout() {
-    // Clear local storage and make logout request if needed
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    localStorage.removeItem('authenticated');
-    return Promise.resolve();
-  }
-
-  // Check if user is authenticated
-  isAuthenticated() {
-    const user = localStorage.getItem('user');
-    return user !== null;
-  }
-
-  // Get current user
-  getCurrentUser() {
-    const user = localStorage.getItem('user');
-    return user ? JSON.parse(user) : null;
-  }
-
-  // Store user data after login/register
-  setUserData(userData) {
-    localStorage.setItem('user', JSON.stringify(userData.user));
-    // Store JWT token if it exists
-    if (userData.token) {
-      this.setAuthToken(userData.token);
+      if (response.success) {
+        return response;
+      } else {
+        throw new Error(response.message || 'Failed to create booking');
+      }
+    } catch (error) {
+      console.error('Create booking error:', error);
+      throw error;
     }
   }
 
@@ -211,50 +218,6 @@ class ApiService {
       }
     } catch (error) {
       console.error('Registration error:', error);
-      throw error;
-    }
-  }
-
-  // Logout user
-  logout() {
-    this.removeAuthToken();
-    localStorage.removeItem('user');
-    localStorage.removeItem('authenticated');
-  }
-
-  // Booking methods (Protected routes - require JWT authentication)
-  async createBooking(bookingData) {
-    try {
-      if (!this.isAuthenticated()) {
-        throw new Error('Please login to create a booking');
-      }
-
-      const response = await this.request('/bookings', {
-        method: 'POST',
-        body: JSON.stringify({
-          hotelId: bookingData.hotelId || 'hotel-default',
-          checkIn: bookingData.checkInDate,
-          checkOut: bookingData.checkOutDate,
-          guests: bookingData.numberOfGuests,
-          roomType: bookingData.roomType,
-          totalPrice: bookingData.totalAmount,
-          guestInfo: {
-            firstName: bookingData.firstName,
-            lastName: bookingData.lastName,
-            email: bookingData.email,
-            phone: bookingData.phoneNumber,
-            specialRequests: bookingData.specialRequests
-          }
-        }),
-      });
-
-      if (response.success) {
-        return response;
-      } else {
-        throw new Error(response.message || 'Failed to create booking');
-      }
-    } catch (error) {
-      console.error('Create booking error:', error);
       throw error;
     }
   }

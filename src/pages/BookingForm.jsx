@@ -1,6 +1,7 @@
 // pages/BookingForm.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import PaymentButton from '../components/PaymentButton';
 import { validateBookingData, formatCurrency } from '../utils/pricing';
 import { SUPPORTED_CURRENCIES, convertFromSGD, getExchangeDisplay, formatCurrencyWithSymbol } from '../utils/currency';
@@ -9,7 +10,12 @@ import ApiService from '../services/api';
 const BookingForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, isAuthenticated, logout } = useAuth();
   const [step, setStep] = useState(1); // 1: Guest Info, 2: Review & Payment
+  // Get hotel details from navigation state immediately
+  const hotelDetails = location.state?.hotelDetails;
+  console.log('BookingForm initializing with hotelDetails:', hotelDetails);
+  
   const [formData, setFormData] = useState({
     // Guest Information
     firstName: '',
@@ -18,16 +24,17 @@ const BookingForm = () => {
     phoneNumber: '',
     specialRequests: '',
     
-    // Booking Details (pre-filled or from URL params)
-    hotelName: 'Grand Plaza Hotel',
-    roomType: 'Deluxe Suite',
-    checkInDate: '2024-04-01',
-    checkOutDate: '2024-04-03',
-    numberOfGuests: 2,
-    numberOfNights: 2,
-    pricePerNight: 250,
-    totalAmount: 500, // This will be the specified price
-    currency: 'SGD', // Default currency - user can change this
+    // Booking Details - populated from hotel details navigation state
+    hotelId: hotelDetails?.id || 'hotel_id_1234', 
+    hotelName: hotelDetails?.name || 'Grandeus Hotel',
+    roomType: hotelDetails?.room || 'Deluxe Suite',
+    checkInDate: hotelDetails?.checkIn || '2026-10-01',
+    checkOutDate: hotelDetails?.checkOut || '2026-10-05',
+    numberOfGuests: hotelDetails?.guests || 3,
+    numberOfNights: hotelDetails?.nights || 5,
+    pricePerNight: hotelDetails?.price && hotelDetails?.nights ? hotelDetails.price / hotelDetails.nights : 0,
+    totalAmount: hotelDetails?.price || 4300,
+    currency: hotelDetails?.currency || 'SGD',
     
     // Generated booking ID
     bookingId: `booking_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -35,47 +42,47 @@ const BookingForm = () => {
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [authenticationRequired, setAuthenticationRequired] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
 
-  // Check authentication status on component mount and when location changes
+  // Check authentication status and pre-fill form with user data
   useEffect(() => {
-    const checkAuthStatus = () => {
-      const user = ApiService.getCurrentUser();
-      const isAuthenticated = ApiService.isAuthenticated();
-      
-      if (isAuthenticated && user) {
-        setCurrentUser(user);
-        setAuthenticationRequired(false);
-        // Pre-fill form with user data if available
-        setFormData(prev => ({
-          ...prev,
-          firstName: user.firstName || prev.firstName,
-          lastName: user.lastName || prev.lastName,
-          email: user.email || prev.email
-        }));
-      } else {
-        setCurrentUser(null);
-        setAuthenticationRequired(true);
-      }
-    };
+    if (isAuthenticated() && user) {
+      console.log('User is authenticated:', user);
+      // Pre-fill form with user data if available
+      setFormData(prev => ({
+        ...prev,
+        firstName: user.firstName || prev.firstName,
+        lastName: user.lastName || prev.lastName,
+        email: user.email || prev.email
+      }));
+    } else {
+      console.log('User not authenticated, token check:', {
+        hasToken: !!ApiService.getAuthToken(),
+        hasUser: !!user,
+        isAuth: isAuthenticated()
+      });
+    }
+  }, [user, isAuthenticated]); 
 
-    // Check on mount and location change
-    checkAuthStatus();
+  // Populate form with hotel details from navigation state
+  useEffect(() => {
+    const hd = location.state?.hotelDetails; // { id, name, room, checkIn, checkOut, guests, nights, price, currency? }
+    if (!hd) return;
 
-    // Also check when window gains focus (user returns from login)
-    const handleFocus = () => checkAuthStatus();
-    window.addEventListener('focus', handleFocus);
-
-    // Listen for storage changes (if user logs in/out in another tab)
-    const handleStorageChange = () => checkAuthStatus();
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [location.pathname]); // Add location.pathname as dependency to refresh when user returns
+    setFormData(prev => ({
+      ...prev,
+      hotelId: hd.id ?? prev.hotelId,
+      hotelName: hd.name ?? prev.hotelName,
+      roomType: hd.room ?? prev.roomType,
+      checkInDate: hd.checkIn ?? prev.checkInDate,
+      checkOutDate: hd.checkOut ?? prev.checkOutDate,
+      numberOfGuests: Number(hd.guests ?? prev.numberOfGuests),
+      numberOfNights: Number(hd.nights ?? prev.numberOfNights),
+      totalAmount: Number(hd.price ?? prev.totalAmount),
+      // optional
+      pricePerNight: hd.price && hd.nights ? Number(hd.price) / Number(hd.nights) : prev.pricePerNight,
+      currency: hd.currency || 'SGD', 
+    }));
+  }, [location.state?.hotelDetails]); 
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -115,34 +122,36 @@ const BookingForm = () => {
     setIsSubmitting(true);
     try {
       // Check if user is authenticated
-      if (!ApiService.isAuthenticated()) {
+      const token = ApiService.getAuthToken();
+      const authCheck = isAuthenticated();
+      
+      console.log('Pre-booking auth check:', {
+        hasToken: !!token,
+        tokenValue: token ? `${token.substring(0, 20)}...` : 'null',
+        hasUser: !!user,
+        isAuthenticated: authCheck
+      });
+      
+      if (!authCheck || !token) {
         alert('Please login to create a booking. Redirecting to login page...');
         navigate('/login', { state: { from: location } });
         return;
       }
 
-      // Call your JWT-protected booking API
-      console.log('Creating booking with JWT authentication...');
-      const bookingResponse = await ApiService.createBooking(formData);
-
-      if (bookingResponse.success) {
-        console.log('✅ Booking created successfully:', bookingResponse.booking);
-        alert(`Booking created successfully! Booking ID: ${bookingResponse.booking.id}`);
-        
-        // Optionally redirect to booking details or continue with payment
-        // navigate(`/booking-success/${bookingResponse.booking.id}`);
-      } else {
-        throw new Error(bookingResponse.message || 'Failed to create booking');
-      }
+      // Ky: Don't create booking here, let payment session handle it
+      console.log('✅ Auth check passed, ready for payment session creation');
+      
+      // The PaymentButton will handle the payment session and booking creation
+      setStep(2); // Allow user to proceed to payment step
 
     } catch (error) {
-      console.error('❌ Error creating booking:', error);
+      console.error('❌ Error in booking preparation:', error);
       
       if (error.message.includes('login') || error.message.includes('401')) {
         alert('Your session has expired. Please login again.');
         navigate('/login', { state: { from: location } });
       } else {
-        alert(`Failed to create booking: ${error.message}`);
+        alert(`Failed to prepare booking: ${error.message}`);
       }
     } finally {
       setIsSubmitting(false);
@@ -151,34 +160,8 @@ const BookingForm = () => {
 
   const renderGuestInfoStep = () => (
     <div className="space-y-6">
-      {/* Authentication Warning */}
-      {authenticationRequired && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-5 h-5 text-yellow-400">⚠️</div>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-yellow-800">
-                Authentication Required
-              </h3>
-              <p className="mt-1 text-sm text-yellow-700">
-                You need to be logged in to create a booking. 
-                <button 
-                  onClick={() => navigate('/login', { state: { from: location } })}
-                  className="font-medium underline hover:text-yellow-900 ml-1"
-                >
-                  Click here to login
-                </button>
-                or continue as guest (you'll be asked to login before payment).
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* User Info Display */}
-      {currentUser && (
+      {/* User Info Display - Only show if logged in */}
+      {isAuthenticated() && user && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -186,15 +169,18 @@ const BookingForm = () => {
             </div>
             <div className="ml-3">
               <h3 className="text-sm font-medium text-green-800">
-                Logged in as {currentUser.firstName} {currentUser.lastName}
+                Logged in as {user.firstName} {user.lastName}
               </h3>
               <p className="mt-1 text-sm text-green-700">
                 Your booking will be saved to your account.
                 <button 
-                  onClick={() => {
-                    ApiService.logout();
-                    setCurrentUser(null);
-                    setAuthenticationRequired(true);
+                  onClick={async () => {
+                    try {
+                      await logout(navigate);
+                      console.log('User logged out successfully');
+                    } catch (error) {
+                      console.error('Logout error:', error);
+                    }
                   }}
                   className="font-medium underline hover:text-green-900 ml-2"
                 >
@@ -414,7 +400,7 @@ const BookingForm = () => {
         </p>
         
         <div className="space-y-4">
-          {!ApiService.isAuthenticated() ? (
+          {!isAuthenticated() ? (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
               <h4 className="text-red-800 font-semibold mb-2">⚠️ Login Required</h4>
               <p className="text-red-700 text-sm mb-3">
@@ -432,7 +418,6 @@ const BookingForm = () => {
               <PaymentButton 
                 bookingData={formData} 
                 isSubmitting={isSubmitting}
-                onBeforePayment={handleCreateBooking}
               />
               
               <p className="text-xs text-gray-500 text-center">
