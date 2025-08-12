@@ -86,22 +86,23 @@ const HotelSearchResults = () => {
     abortPollRef.current = false;
     try {
       let priceData = await ApiService.getHotelsPrice(priceQuery);
-      let pollCount = 0;
-      let unchangedRounds = 0;
-      let lastCount = priceData?.hotels?.length || 0;
-      while (!abortPollRef.current && priceData && priceData.completed !== true && pollCount < 20) { 
-        await new Promise(res => setTimeout(res, 1500)); // 1.5s interval to ease load
-        const next = await ApiService.getHotelsPrice(priceQuery);
-        const currentCount = next?.hotels?.length || 0;
-        if (currentCount === lastCount) {
-          unchangedRounds += 1;
-        } else {
-          unchangedRounds = 0;
-          lastCount = currentCount;
-        }
-        priceData = next;
-        pollCount++;
-      }
+      // let pollCount = 0;
+      // let unchangedRounds = 0;
+      // let lastCount = priceData?.hotels?.length || 0;
+      // while (!abortPollRef.current && priceData && priceData.completed !== true && pollCount < 20) { 
+      //   await new Promise(res => setTimeout(res, 1500)); // 1.5s interval to ease load
+      //   const next = await ApiService.getHotelsPrice(priceQuery);
+      //   const currentCount = next?.hotels?.length || 0;
+      //   if (currentCount === lastCount) {
+      //     unchangedRounds += 1;
+      //   } else {
+      //     unchangedRounds = 0;
+      //     lastCount = currentCount;
+      //   }
+      //   priceData = next;
+      //   pollCount++;
+      // }
+      console.log('Final price data:', priceData);
       setPrices(priceData?.hotels || []);
     } catch (err) {
       console.error('Price polling failed:', err);
@@ -187,7 +188,7 @@ const HotelSearchResults = () => {
       setLoading(false);
     }
   };
-      
+
   const fetchHotels = async () => {
     setLoading(true);
     try {
@@ -214,22 +215,6 @@ const HotelSearchResults = () => {
 
       // Stop loading as soon as hotels are available
       setLoading(false);
-
-      // Build price query for initial load (async in background)
-      const priceQuery = {
-        destination_id: destinationId,
-        checkin: checkin,
-        checkout: checkout,
-        lang: 'en_US',
-        currency: 'SGD',
-        guests: guests,
-        partner_id: 1089,
-        landing_page: 'wl-acme-earn',
-        product_type: 'earn'
-      };
-
-      // Load prices in background without blocking UI
-      pollPrices(priceQuery);
     } catch (err) {
       console.error('Failed to fetch hotels:', err);
       setHotels([]);
@@ -243,6 +228,21 @@ const HotelSearchResults = () => {
 
   useEffect(() => {
     fetchHotels();
+    // Build price query for initial load (async in background)
+    const priceQuery = {
+      destination_id: destinationId,
+      checkin: checkin,
+      checkout: checkout,
+      lang: 'en_US',
+      currency: 'SGD',
+      guests: guests,
+      partner_id: 1089,
+      landing_page: 'wl-acme-earn',
+      product_type: 'earn'
+    };
+
+    // Load prices in background without blocking UI
+    pollPrices(priceQuery);
     return () => { abortPollRef.current = true; };
   }, [destinationId]);
 

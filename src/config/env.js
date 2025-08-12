@@ -2,7 +2,7 @@
 const config = {
   // API Configuration
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
-  apiTimeout: parseInt(import.meta.env.VITE_API_TIMEOUT) || 10000,
+  apiTimeout: parseInt(import.meta.env.VITE_API_TIMEOUT) || 10000000,
   
   // App Information
   appName: import.meta.env.VITE_APP_NAME || 'StayEase',
