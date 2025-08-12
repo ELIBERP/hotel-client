@@ -1,28 +1,31 @@
 FROM node:20-alpine as build
-
 WORKDIR /app
 
-# Copy package files and install dependencies
+# 👇 pull from Render as build-arg and expose to the build env
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 COPY package.json package-lock.json ./
 RUN npm ci
-
-# Copy source code
 COPY . .
-
-# Build the application
 RUN npm run build
 
-# Production stage
 FROM nginx:alpine
 
-# Copy built static files to nginx
+# Default for local/dev; Render will inject/override PORT at runtime
+ENV PORT=10000
+
+# Static files
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy custom nginx configuration if needed
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Nginx template -> auto-envsubst at startup
+COPY default.conf.template /etc/nginx/templates/default.conf.template
 
-# Expose port 80
-EXPOSE 80
+# Healthcheck tooling
+RUN apk add --no-cache curl
 
-# Start nginx
+# Healthcheck (shell form so $PORT expands at runtime)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD sh -c 'curl -fsS "http://127.0.0.1:${PORT}/" >/dev/null || exit 1'
+
 CMD ["nginx", "-g", "daemon off;"]
