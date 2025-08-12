@@ -1,4 +1,5 @@
-FROM node:20-alpine as build
+# Use a Node image that's not Alpine-based to avoid musl compatibility issues
+FROM node:18 as build
 WORKDIR /app
 
 # 👇 pull from Render as build-arg and expose to the build env
@@ -8,6 +9,12 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+
+# Fix Rollup binary issues
+RUN npm install -g @rollup/rollup-linux-x64-gnu
+RUN npm install @rollup/rollup-linux-x64-gnu
+
+# Build the app
 RUN npm run build
 
 FROM nginx:alpine
