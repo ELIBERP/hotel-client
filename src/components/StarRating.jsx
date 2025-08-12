@@ -1,13 +1,14 @@
 // StarRating.jsx
 import React from 'react';
 
-const Star = ({ fill = 0, color = 'gray', index = 0 }) => {
+const Star = ({ fill = 0, color = 'gray', index = 0, size = 24 }) => {
   const fillPercent = Math.round(fill * 100);
   const gradientId = `starFill-${index}-${color.replace('#', '')}-${fillPercent}`;
 
   return (
     <svg
-      className="w-6 h-6 mr-1"
+  className="mr-1"
+  style={{ width: size, height: size }}
       viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
@@ -29,7 +30,7 @@ const Star = ({ fill = 0, color = 'gray', index = 0 }) => {
 };
 
 
-const StarRating = ({ rating }) => {
+const StarRating = ({ rating, size = 24 }) => {
   const getColor = (r) => {
     if (r <= 1) return '#ef4444'; // red
     if (r <= 3) return '#facc15'; // yellow
@@ -41,7 +42,7 @@ const StarRating = ({ rating }) => {
   const stars = Array.from({ length: 5 }, (_, i) => {
     const diff = rating - i;
     const fill = diff >= 1 ? 1 : diff > 0 ? diff : 0;
-    return <Star key={i} fill={fill} color={color} index={i} />;
+  return <Star key={i} fill={fill} color={color} index={i} size={size} />;
   });
   return <div className="flex items-center">{stars}</div>;
 };
