@@ -663,7 +663,7 @@ const HotelSearchResults = () => {
                               <div className="text-black font-bold text-3xl leading-tight">
                                 ${perNight.toFixed(0)} <span className="text-base font-medium">/night</span>
                               </div>
-                              <div className="text-black font-semibold text-sm mt-1">{priceText}</div>
+                              <div className="text-black font-semibold text-sm mt-1 whitespace-nowrap">{priceText}</div>
                             </>
                           ) : (
                             <div className="text-gray-500 text-sm mb-4">Price unavailable</div>
