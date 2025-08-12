@@ -496,14 +496,13 @@ const HotelSearchResults = () => {
             </select>
           </div>
           {/* Loading and empty states */}
-          {loading ? (
+          {(loading || isPollingRef.current) ? (
             <div className="flex flex-col gap-8">
               {/* Skeleton loading cards */}
               {Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="relative rounded-xl overflow-hidden shadow-lg border border-gray-200 bg-white flex animate-pulse">
                   {/* Skeleton image */}
                   <div className="w-80 h-56 bg-gray-200 flex-shrink-0"></div>
-                  
                   {/* Skeleton content */}
                   <div className="p-6 flex w-full justify-between gap-6">
                     <div className="flex flex-col justify-between flex-1">
@@ -522,7 +521,6 @@ const HotelSearchResults = () => {
                         </div>
                       </div>
                     </div>
-                    
                     {/* Price skeleton */}
                     <div className="flex flex-col items-end justify-end text-right min-w-[170px]">
                       <div className="h-10 bg-gray-200 rounded w-32 mb-2"></div>
