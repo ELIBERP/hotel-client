@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      const response = await ApiService.login(credentials);
+      const response = await ApiService.login(credentials.email, credentials.password);
       if (response.success) {
         ApiService.setUserData(response);
         setUser(response.user);
@@ -56,12 +56,28 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = async () => {
+  const logout = async (navigate = null) => {
     try {
-      await ApiService.logout();
+      // Always clear user state first to prevent any UI glitches
       setUser(null);
+      
+      // Call API logout (don't await to prevent delays)
+      ApiService.logout();
+      
+      console.log('✅ AuthContext: User logged out successfully');
+      
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('❌ AuthContext logout error:', error);
+      // Even if API call fails, user state is already cleared
+    } finally {
+      // Simple navigation - always go to home page
+      if (navigate) {
+        // Use replace to prevent back button issues
+        navigate('/', { replace: true });
+      } else {
+        // Fallback to direct navigation if no navigate function
+        window.location.href = '/';
+      }
     }
   };
 

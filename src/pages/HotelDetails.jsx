@@ -1,12 +1,10 @@
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import ApiService from '../services/api';
 import Map from '../components/Map';
 import SearchBar from '../components/SearchBar';
 import RoomGrid from '../components/RoomGrid';
 import { LoadScript } from '@react-google-maps/api';
-import { useRef } from 'react';
-import useOutsideClick from '../hooks/useOutsideClick';
-import React, { useEffect, useState } from 'react';
 import Skeleton from '../components/Skeleton';
 import Spinner from '../components/Spinner';
 import { roomAmenityKeys } from '../constants/amenities';
@@ -111,7 +109,6 @@ const HotelDetails = () => {
   const checkout = queryParams.get('checkout');
   const guests = queryParams.get('guests');
   const currency = queryParams.get('currency');
-  //const country_code = queryParams.get('country_code');
   const country_code = 'SG';
   const lang = queryParams.get('lang');
   // Validate required query parameters
@@ -128,8 +125,6 @@ const HotelDetails = () => {
     return match ? parseInt(match[1], 10) : 0;
   };
 
-
-
   const filteredRooms = rooms.filter((room) => {
     const bedCount = extractBedCount(room.long_description);
     if (selectedFilter === 'all') return true;
@@ -138,11 +133,10 @@ const HotelDetails = () => {
     return true;
   });
 
-  // Outside Click
-  //ref={descModalRef} add this line to detect clicks outside the box for implementation of useOutsideClick
-  useOutsideClick(mapModalRef, () => setShowMapModal(false)); // Google map popup
-  useOutsideClick(descModalRef, () => setShowDescriptionModal(false)); // Hotel Desc popup
-  useOutsideClick(roomModalRef, () => setSelectedRoom(null)); // Room Detail popup
+  // Outside click handlers for modals
+  useOutsideClick(mapModalRef, () => setShowMapModal(false));
+  useOutsideClick(descModalRef, () => setShowDescriptionModal(false));
+  useOutsideClick(roomModalRef, () => setSelectedRoom(null));
 
   useEffect(() => { //for scroll lock
   document.body.style.overflow = showDescriptionModal ? 'hidden' : '';
@@ -175,39 +169,23 @@ const HotelDetails = () => {
     }
   }, [rooms, hotel, checkin, checkout, guests]); // for room grid , the button only brings to first room
 
-
-  // This is the real data. But sometimes unable to take it from feature 2
+  // mock for ky
   const handleBookSelectedRoom = (room) => {
+    
     const nights = Math.ceil((new Date(checkout) - new Date(checkin)) / (1000 * 3600 * 24));
     const selectedDetails = {
-      name: hotel?.name || '',
-      room: room.roomDescription,
-      checkIn: checkin,
-      checkOut: checkout,
-      guests: guests,
-      nights: nights,
-      price: room.converted_price || 500,
+      id: hotel?.hotelId || hotel?.id || hotel?.hotel_id || `hotel_${Date.now()}`,
+      name: hotel?.name || 'No Hotel Selected',
+      room: room.roomDescription || room.name || 'No Room Selected',
+      checkIn: checkin || '2026-01-01',
+      checkOut: checkout || '2026-02-02',
+      guests: parseInt(guests) || 1,
+      nights: nights || 1,
+      price: room.converted_price || room.price || 0,
+      currency: currency || 'SGD',
     };
 
-    // MOCK DATA for KY
-    // const handleBookSelectedRoom = (room) => {
-    //   const nights = 2;
-    //   const selectedDetails = {
-    //   name: "ibis budget Singapore Selegie",
-    //   room: "Superior Room, 2 Twin Beds",
-    //   checkIn: "2025-08-29",
-    //   checkOut: "2025-08-31",
-    //   guests: 2,
-    //   nights: 2,
-    //   price: 321.22,
-    // };
-
-    navigate('/booking', { state: { hotelDetails: selectedDetails } });
-  };
-  
-  const handleBookNow = () => {
-    // Pass hotelDetails to the booking page
-    navigate('/booking', { state: { hotelDetails } });
+    navigate('/booking-form', { state: { hotelDetails: selectedDetails } });
   };
 
   useEffect(() => {
@@ -349,8 +327,8 @@ const mainImageUrl = firstImage || FALLBACK;
                 placeholder="Paris, France"
                 size="hotelDetailPage"
                 className="w-full max-w-screen-xl mx-auto"
-                onSearch={(query, results) => {
-                  console.log("Hotel details search triggered:", query, results);
+                onSearch={() => {
+                  // Search functionality placeholder
                 }}
               />
             </div>
@@ -524,8 +502,6 @@ const mainImageUrl = firstImage || FALLBACK;
             />
           )}
         </div>
-
-
 
         {showMapModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto p-4">

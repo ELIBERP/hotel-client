@@ -34,7 +34,7 @@ const BookingForm = () => {
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!isAuthenticated()) {
-      navigate('/login', { state: { from: { pathname: '/booking' } } });
+      navigate('/login', { state: { from: { pathname: '/booking-form' } } });
     }
   }, [isAuthenticated, navigate]);
 

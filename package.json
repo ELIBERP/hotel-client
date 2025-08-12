@@ -10,9 +10,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test-vitest": "vitest",
-    "cypress:open": "cypress open",
-    "cypress:run": "cypress run"
+    "test:payment": "jest --config=jest.config.payment.js",
+    "test:payment:watch": "jest --config=jest.config.payment.js --watch",
+    "test:payment:coverage": "jest --config=jest.config.payment.js --coverage"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.7",
@@ -37,9 +37,7 @@
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.7.0",
     "@vitejs/plugin-vue": "^6.0.1",
-    "@vitest/ui": "^3.2.4",
     "babel-jest": "^30.0.5",
-    "cypress": "^14.5.4",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
@@ -48,8 +46,7 @@
     "jest-environment-jsdom": "^30.0.5",
     "jsdom": "^26.1.0",
     "vite": "^6.3.5",
-    "vite-plugin-env-compatible": "^2.0.1",
-    "vitest": "^3.2.4"
+    "vite-plugin-env-compatible": "^2.0.1"
   },
   "comments": "Jest config moved to jest.config.js"
 }
