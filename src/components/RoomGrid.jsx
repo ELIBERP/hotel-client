@@ -2,6 +2,20 @@
 import React from 'react';
 import AmenityChip from './AmenityChip';
 
+const formatBreakfast = (code) => {
+  switch (code) {
+    case 'hotel_detail_room_only':
+      return 'Not included';
+    case 'hotel_detail_breakfast_included':
+      return 'Included';
+    case 'hotel_detail_breakfast_available':
+    case 'hotel_detail_breakfast_optional':
+      return 'Available (extra charge)';
+    default:
+      return 'Not included';
+  }
+};
+
 const RoomGrid = ({ rooms = [], loading = false, onRoomClick, roomHideKeys }) => {
   const extractBedAndSize = (long_description) => {
     if (!long_description) return { bedInfo: '', sizeInfo: '' };
@@ -27,11 +41,7 @@ const RoomGrid = ({ rooms = [], loading = false, onRoomClick, roomHideKeys }) =>
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {rooms.map((room, idx) => {
         const { bedInfo, sizeInfo } = extractBedAndSize(room?.long_description);
-        const breakfastRaw = room?.roomAdditionalInfo?.breakfastInfo;
-        const breakfast =
-          breakfastRaw === 'hotel_detail_room_only'
-            ? 'No breakfast'
-            : (breakfastRaw ? 'Breakfast included' : '—');
+        const breakfastLabel = formatBreakfast(room?.roomAdditionalInfo?.breakfastInfo);
 
         const keys = Array.isArray(room?.importantAmenityKeys) ? room.importantAmenityKeys : [];
         const visible = keys.filter(k => !hideSet.has(k)).slice(0, 6);
@@ -54,7 +64,7 @@ const RoomGrid = ({ rooms = [], loading = false, onRoomClick, roomHideKeys }) =>
               <div className="text-sm text-gray-600 space-y-1 mb-3">
                 <p>{bedInfo}</p>
                 <p>{sizeInfo}</p>
-                <p>{breakfast}</p>
+                <p>Breakfast: {breakfastLabel}</p>
                 <p>{room?.free_cancellation ? 'Free cancellation' : 'No cancellation'}</p>
                 <p>
                   Price: <strong>{room?.converted_price} {room?.converted_price ? 'SGD' : ''}</strong>

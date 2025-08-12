@@ -12,10 +12,23 @@ import Spinner from '../components/Spinner';
 import { AMENITY_MAP, roomAmenityKeys } from '../constants/amenities';
 import AmenityChip from '../components/AmenityChip';
 import CatHotelImage from '../assets/CatHotelImage.svg';
+import { parseNearby } from '../utils/parseNearby';
 
 const FALLBACK = CatHotelImage; 
-const MIN_LOADING_MS = 100;
 
+const formatBreakfast = (code) => {
+  switch (code) {
+    case 'hotel_detail_room_only':
+      return 'Not included';
+    case 'hotel_detail_breakfast_included':
+      return 'Included';
+    case 'hotel_detail_breakfast_available':
+    case 'hotel_detail_breakfast_optional':
+      return 'Available (extra charge)';
+    default:
+      return 'Not included';
+  }
+};
 
 const HotelHeaderSkeleton = () => (
   <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-6">
@@ -131,6 +144,12 @@ const HotelDetails = () => {
   useOutsideClick(descModalRef, () => setShowDescriptionModal(false)); // Hotel Desc popup
   useOutsideClick(roomModalRef, () => setSelectedRoom(null)); // Room Detail popup
 
+  useEffect(() => { //for scroll lock
+  document.body.style.overflow = showDescriptionModal ? 'hidden' : '';
+  return () => {
+    document.body.style.overflow = '';
+  };
+}, [showDescriptionModal]);
 
   // for page refresh when choosing another hotel under recommendation
   useEffect(() => {
@@ -201,8 +220,6 @@ const HotelDetails = () => {
       setImages([]);
       setRooms([]);
       setLoadingRooms(true);
-
-      const start = performance.now();
 
       // Build query once
       const query = {
@@ -280,6 +297,25 @@ const HotelDetails = () => {
     return () => { cancelled = true; };
   }, [id, destination_id, checkin, checkout, guests, currency, country_code, lang]);
 
+  const longHtml = hotel?.long_description || hotel?.description || '';
+  const nearby = React.useMemo(() => parseNearby(longHtml), [longHtml]);
+
+  // Convert HTML to readable text (replace <br> with newlines, strip tags)
+const htmlToText = (html) => {
+  if (!html) return '';
+  const div = document.createElement('div');
+  div.innerHTML = html.replace(/<br\s*\/?>/gi, '\n');
+  return (div.textContent || '').trim();
+};
+
+// Keep only the “about” paragraph(s), drop the distances/airports block
+const aboutOnlyHtml = longHtml.split(/Distances are displayed/i)[0] || longHtml;
+const aboutText = htmlToText(aboutOnlyHtml);
+
+// Main image w/ fallback
+const firstImage = Array.isArray(images) && images[0] ? images[0] : null;
+const mainImageUrl = firstImage || FALLBACK;
+
   if (!hotel) {
     return (
       <div className="animate-fade-in relative min-h-[70vh]">
@@ -302,8 +338,7 @@ const HotelDetails = () => {
     );
     
   }
-  const firstImage = Array.isArray(images) && images[0] ? images[0] : null;
-  const mainImageUrl = firstImage || FALLBACK;
+  
   return (
     <div>
       <div>
@@ -374,7 +409,9 @@ const HotelDetails = () => {
                     {hotelAmenityKeys.map(k => <AmenityChip key={k} k={k} size="lg" />)}
                   </div>
                 </section>
+              
               )}
+              
             </div>
           </div>
 
@@ -398,15 +435,38 @@ const HotelDetails = () => {
           
         </div>
         {showDescriptionModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div 
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div
               ref={descModalRef}
-              className="bg-white rounded-xl p-6 max-w-lg w-full mx-4"
+              className="bg-white rounded-xl w-full max-w-lg max-h-[85vh] overflow-y-auto p-6" 
             >
               <h2 className="text-xl font-semibold mb-4">Full Description</h2>
+
+              {/* Cleaned description (no <br> spam) */}
               <p className="text-sm text-[#0e151b] leading-relaxed whitespace-pre-line">
-                {hotel.description}
+                {aboutText}
               </p>
+
+              {/* What's nearby (POIs only; airports already filtered by parseNearby) */}
+              {nearby.pois.length > 0 && (
+                <section className="mt-6">
+                  <h3 className="text-lg font-semibold text-[#0e151b] mb-2">What’s nearby</h3>
+                  <ul className="space-y-1">
+                    {nearby.pois.slice(0, 12).map((p, i) => (
+                      <li key={`poi-${i}`} className="text-sm text-gray-700 flex items-start gap-2">
+                        <span className="material-symbols-outlined text-[18px] leading-none mt-[2px]">
+                          place
+                        </span>
+                        <span>
+                          {p.name}{' '}
+                          <span className="text-gray-500">— {p.km} km / {p.mi} mi</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
               <div className="mt-6 text-right">
                 <button
                   onClick={() => setShowDescriptionModal(false)}
@@ -423,7 +483,7 @@ const HotelDetails = () => {
         {/* I really shouldnt expose this haha */}
         {!googleApiLoaded && (
           <LoadScript
-            googleMapsApiKey={"AIzaSyAMA3VTBdscv_40tdyz0X4kfJKPG2i97QM"}
+            googleMapsApiKey={import.meta.env.VITE_GOOGLEMAP_API_KEY}
             onLoad={() => setGoogleApiLoaded(true)}
             loadingElement={<></>}         // 👈 hides the default "Loading..."
             // or: loading={<></>}         // 👈 if your version uses `loading`
@@ -468,7 +528,7 @@ const HotelDetails = () => {
 
 
         {showMapModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 overflow-y-auto p-4">
           <div 
             ref={mapModalRef}
             className="bg-white rounded-xl p-4 max-w-3xl w-full mx-4 relative"
@@ -525,9 +585,7 @@ const HotelDetails = () => {
             {/* Breakfast Info */}
             <p className="text-sm mb-4">
               <strong>Breakfast:</strong>{' '}
-              {selectedRoom.roomAdditionalInfo?.breakfastInfo === 'hotel_detail_room_only'
-                ? 'Not included'
-                : selectedRoom.roomAdditionalInfo?.breakfastInfo || '—'}
+              {formatBreakfast(selectedRoom?.roomAdditionalInfo?.breakfastInfo)}
             </p>
 
             {/* Optional Display Fields (Safe) */}
