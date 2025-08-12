@@ -651,7 +651,7 @@ const HotelSearchResults = () => {
                             )}
                           </div>
                         </div>
-                        <div className="flex flex-col items-end justify-end text-right min-w-[170px]">
+                        <div className="flex flex-col items-end justify-end text-right min-w-[170px] pt-8">
                           {hotel.priceLoading ? (
                             <>
                               <div className="flex items-center gap-2 mb-2">
