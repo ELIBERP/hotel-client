@@ -4,22 +4,7 @@ import destinations from '../assets/destinations.json';
 import StarRating from '../components/StarRating';
 import { Link, useLocation } from 'react-router-dom';
 import ApiService from '../services/api';
-
-// Amenity icon/label mapping (Material Icons)
-const AMENITY_MAP = {
-  airConditioning: { label: 'A/C', icon: 'ac_unit' },
-  clothingIron: { label: 'Iron', icon: 'iron' },
-  continentalBreakfast: { label: 'Breakfast', icon: 'free_breakfast' },
-  dataPorts: { label: 'Data', icon: 'settings_ethernet' },
-  dryCleaning: { label: 'Dry Cleaning', icon: 'local_laundry_service' },
-  hairDryer: { label: 'Hair Dryer', icon: 'dry' },
-  miniBarInRoom: { label: 'Mini Bar', icon: 'local_bar' },
-  outdoorPool: { label: 'Pool', icon: 'pool' },
-  parkingGarage: { label: 'Parking', icon: 'local_parking' },
-  roomService: { label: 'Room Service', icon: 'room_service' },
-  safe: { label: 'Safe', icon: 'lock' },
-  tVInRoom: { label: 'TV', icon: 'tv' }
-};
+import { AMENITY_MAP } from '../constants/amenities';
 
 // Main hotel search results component
 const HotelSearchResults = () => {
@@ -496,14 +481,13 @@ const HotelSearchResults = () => {
             </select>
           </div>
           {/* Loading and empty states */}
-          {loading ? (
+          {(loading || isPollingRef.current) ? (
             <div className="flex flex-col gap-8">
               {/* Skeleton loading cards */}
               {Array.from({ length: 6 }).map((_, index) => (
                 <div key={index} className="relative rounded-xl overflow-hidden shadow-lg border border-gray-200 bg-white flex animate-pulse">
                   {/* Skeleton image */}
                   <div className="w-80 h-56 bg-gray-200 flex-shrink-0"></div>
-                  
                   {/* Skeleton content */}
                   <div className="p-6 flex w-full justify-between gap-6">
                     <div className="flex flex-col justify-between flex-1">
@@ -522,7 +506,6 @@ const HotelSearchResults = () => {
                         </div>
                       </div>
                     </div>
-                    
                     {/* Price skeleton */}
                     <div className="flex flex-col items-end justify-end text-right min-w-[170px]">
                       <div className="h-10 bg-gray-200 rounded w-32 mb-2"></div>
@@ -665,7 +648,7 @@ const HotelSearchResults = () => {
                               <div className="text-black font-bold text-3xl leading-tight">
                                 ${perNight.toFixed(0)} <span className="text-base font-medium">/night</span>
                               </div>
-                              <div className="text-black font-semibold text-sm mt-1">{priceText}</div>
+                              <div className="text-black font-semibold text-sm mt-1 whitespace-nowrap">{priceText}</div>
                             </>
                           ) : (
                             <div className="text-gray-500 text-sm mb-4">Price unavailable</div>
