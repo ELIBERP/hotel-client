@@ -1,10 +1,21 @@
 // pages/BookingForm.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import PaymentButton from '../components/PaymentButton';
 import { validateBookingData, formatCurrency } from '../utils/pricing';
+import { SUPPORTED_CURRENCIES, convertFromSGD, getExchangeDisplay, formatCurrencyWithSymbol } from '../utils/currency';
+import ApiService from '../services/api';
 
 const BookingForm = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user, isAuthenticated, logout } = useAuth();
   const [step, setStep] = useState(1); // 1: Guest Info, 2: Review & Payment
+  // Get hotel details from navigation state immediately
+  const hotelDetails = location.state?.hotelDetails;
+  console.log('BookingForm initializing with hotelDetails:', hotelDetails);
+  
   const [formData, setFormData] = useState({
     // Guest Information
     firstName: '',
@@ -13,15 +24,17 @@ const BookingForm = () => {
     phoneNumber: '',
     specialRequests: '',
     
-    // Booking Details (pre-filled or from URL params)
-    hotelName: 'Grand Plaza Hotel',
-    roomType: 'Deluxe Suite',
-    checkInDate: '2024-04-01',
-    checkOutDate: '2024-04-03',
-    numberOfGuests: 2,
-    numberOfNights: 2,
-    pricePerNight: 250,
-    totalAmount: 500, // This will be the specified price
+    // Booking Details - populated from hotel details navigation state
+    hotelId: hotelDetails?.id || 'hotel_id_1234', 
+    hotelName: hotelDetails?.name || 'Grandeus Hotel',
+    roomType: hotelDetails?.room || 'Deluxe Suite',
+    checkInDate: hotelDetails?.checkIn || '2026-10-01',
+    checkOutDate: hotelDetails?.checkOut || '2026-10-05',
+    numberOfGuests: hotelDetails?.guests || 3,
+    numberOfNights: hotelDetails?.nights || 5,
+    pricePerNight: hotelDetails?.price && hotelDetails?.nights ? hotelDetails.price / hotelDetails.nights : 0,
+    totalAmount: hotelDetails?.price || 4300,
+    currency: hotelDetails?.currency || 'SGD',
     
     // Generated booking ID
     bookingId: `booking_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -29,6 +42,47 @@ const BookingForm = () => {
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check authentication status and pre-fill form with user data
+  useEffect(() => {
+    if (isAuthenticated() && user) {
+      console.log('User is authenticated:', user);
+      // Pre-fill form with user data if available
+      setFormData(prev => ({
+        ...prev,
+        firstName: user.firstName || prev.firstName,
+        lastName: user.lastName || prev.lastName,
+        email: user.email || prev.email
+      }));
+    } else {
+      console.log('User not authenticated, token check:', {
+        hasToken: !!ApiService.getAuthToken(),
+        hasUser: !!user,
+        isAuth: isAuthenticated()
+      });
+    }
+  }, [user, isAuthenticated]); 
+
+  // Populate form with hotel details from navigation state
+  useEffect(() => {
+    const hd = location.state?.hotelDetails; // { id, name, room, checkIn, checkOut, guests, nights, price, currency? }
+    if (!hd) return;
+
+    setFormData(prev => ({
+      ...prev,
+      hotelId: hd.id ?? prev.hotelId,
+      hotelName: hd.name ?? prev.hotelName,
+      roomType: hd.room ?? prev.roomType,
+      checkInDate: hd.checkIn ?? prev.checkInDate,
+      checkOutDate: hd.checkOut ?? prev.checkOutDate,
+      numberOfGuests: Number(hd.guests ?? prev.numberOfGuests),
+      numberOfNights: Number(hd.nights ?? prev.numberOfNights),
+      totalAmount: Number(hd.price ?? prev.totalAmount),
+      // optional
+      pricePerNight: hd.price && hd.nights ? Number(hd.price) / Number(hd.nights) : prev.pricePerNight,
+      currency: hd.currency || 'SGD', 
+    }));
+  }, [location.state?.hotelDetails]); 
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -67,43 +121,38 @@ const BookingForm = () => {
   const handleCreateBooking = async () => {
     setIsSubmitting(true);
     try {
-      // Call your booking API to store guest information
-      const bookingResponse = await fetch(buildApiUrl('/api/bookings'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          bookingId: formData.bookingId,
-          guestInfo: {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            email: formData.email,
-            phoneNumber: formData.phoneNumber,
-            specialRequests: formData.specialRequests
-          },
-          bookingDetails: {
-            hotelName: formData.hotelName,
-            roomType: formData.roomType,
-            checkInDate: formData.checkInDate,
-            checkOutDate: formData.checkOutDate,
-            numberOfGuests: formData.numberOfGuests,
-            numberOfNights: formData.numberOfNights,
-            totalAmount: formData.totalAmount
-          },
-          status: 'pending_payment'
-        })
+      // Check if user is authenticated
+      const token = ApiService.getAuthToken();
+      const authCheck = isAuthenticated();
+      
+      console.log('Pre-booking auth check:', {
+        hasToken: !!token,
+        tokenValue: token ? `${token.substring(0, 20)}...` : 'null',
+        hasUser: !!user,
+        isAuthenticated: authCheck
       });
-
-      if (!bookingResponse.ok) {
-        throw new Error('Failed to create booking');
+      
+      if (!authCheck || !token) {
+        alert('Please login to create a booking. Redirecting to login page...');
+        navigate('/login', { state: { from: location } });
+        return;
       }
 
-      console.log('✅ Booking created successfully');
-      // The PaymentButton will handle the payment process
+      // Ky: Don't create booking here, let payment session handle it
+      console.log('✅ Auth check passed, ready for payment session creation');
+      
+      // The PaymentButton will handle the payment session and booking creation
+      setStep(2); // Allow user to proceed to payment step
+
     } catch (error) {
-      console.error('❌ Error creating booking:', error);
-      alert('Failed to create booking. Please try again.');
+      console.error('❌ Error in booking preparation:', error);
+      
+      if (error.message.includes('login') || error.message.includes('401')) {
+        alert('Your session has expired. Please login again.');
+        navigate('/login', { state: { from: location } });
+      } else {
+        alert(`Failed to prepare booking: ${error.message}`);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -111,8 +160,40 @@ const BookingForm = () => {
 
   const renderGuestInfoStep = () => (
     <div className="space-y-6">
+      {/* User Info Display - Only show if logged in */}
+      {isAuthenticated() && user && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-5 h-5 text-green-400">✅</div>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-green-800">
+                Logged in as {user.firstName} {user.lastName}
+              </h3>
+              <p className="mt-1 text-sm text-green-700">
+                Your booking will be saved to your account.
+                <button 
+                  onClick={async () => {
+                    try {
+                      await logout(navigate);
+                      console.log('User logged out successfully');
+                    } catch (error) {
+                      console.error('Logout error:', error);
+                    }
+                  }}
+                  className="font-medium underline hover:text-green-900 ml-2"
+                >
+                  Logout
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-blue-50 rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-4 text-blue-800">📋 Guest Information</h2>
+        <h2 className="text-xl font-semibold mb-4 text-blue-800">Guest Information</h2>
         <p className="text-blue-600">Please provide your details for the booking</p>
       </div>
 
@@ -203,6 +284,37 @@ const BookingForm = () => {
         </p>
       </div>
 
+      {/* Currency Selection */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <h3 className="text-lg font-semibold text-yellow-800 mb-3">💳 Payment Currency</h3>
+        <p className="text-sm text-yellow-700 mb-3">
+          Select your preferred currency for payment. Base price: {formatCurrency(formData.totalAmount, 'SGD')}
+          {formData.currency !== 'SGD' && (
+            <span className="font-semibold"> → {getExchangeDisplay(formData.totalAmount, formData.currency)}</span>
+          )}
+        </p>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Preferred Payment Currency
+          </label>
+          <select
+            value={formData.currency}
+            onChange={(e) => handleInputChange('currency', e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {SUPPORTED_CURRENCIES.map(curr => (
+              <option key={curr.code} value={curr.code}>
+                {curr.flag} {curr.name} ({curr.code})
+              </option>
+            ))}
+          </select>
+          <p className="text-sm text-gray-500 mt-2">
+            💡 <strong>Note:</strong> Stripe will charge you the converted amount in {formData.currency}. 
+            Exchange rates are updated in real-time.
+          </p>
+        </div>
+      </div>
+
       {/* Next Button */}
       <div className="flex justify-end">
         <button
@@ -250,11 +362,11 @@ const BookingForm = () => {
 
       {/* Price Summary */}
       <div className="bg-gray-50 rounded-lg p-6">
-        <h3 className="text-lg font-semibold mb-4">💰 Payment Summary</h3>
+        <h3 className="text-lg font-semibold mb-4">Payment Summary</h3>
         <div className="space-y-2">
           <div className="flex justify-between text-lg">
             <span>Room Rate ({formData.numberOfNights} nights)</span>
-            <span>{formatCurrency(formData.pricePerNight * formData.numberOfNights)}</span>
+            <span>{formatCurrency(formData.pricePerNight * formData.numberOfNights, 'SGD')}</span>
           </div>
           <div className="flex justify-between text-sm text-gray-600">
             <span>Taxes & Fees</span>
@@ -262,30 +374,57 @@ const BookingForm = () => {
           </div>
           <hr className="my-2" />
           <div className="flex justify-between text-xl font-bold text-green-600">
-            <span>Total Amount</span>
-            <span>{formatCurrency(formData.totalAmount)}</span>
+            <span>Total Amount (SGD)</span>
+            <span>{formatCurrency(formData.totalAmount, 'SGD')}</span>
           </div>
+          {formData.currency !== 'SGD' && (
+            <div className="bg-blue-50 border border-blue-200 rounded p-3 mt-3">
+              <div className="flex justify-between text-lg font-semibold text-blue-800">
+                <span>💳 You'll pay in {formData.currency}</span>
+                <span>{formatCurrencyWithSymbol(convertFromSGD(formData.totalAmount, formData.currency), formData.currency)}</span>
+              </div>
+              <p className="text-sm text-blue-600 mt-1">
+                Exchange rate: {getExchangeDisplay(formData.totalAmount, formData.currency)}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Payment Section */}
       <div className="bg-yellow-50 rounded-lg p-6">
-        <h3 className="text-lg font-semibold mb-3 text-yellow-800">💳 Payment</h3>
+        <h3 className="text-lg font-semibold mb-3 text-yellow-800">Payment</h3>
         <p className="text-yellow-700 mb-4">
           Click "Proceed to Payment" to complete your booking securely with Stripe.
           You'll be redirected to a secure payment page.
         </p>
         
         <div className="space-y-4">
-          <PaymentButton 
-            bookingData={formData} 
-            isSubmitting={isSubmitting}
-            onBeforePayment={handleCreateBooking}
-          />
-          
-          <p className="text-xs text-gray-500 text-center">
-            🔒 Your payment is secured by Stripe. No card details are stored on our servers.
-          </p>
+          {!isAuthenticated() ? (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+              <h4 className="text-red-800 font-semibold mb-2">⚠️ Login Required</h4>
+              <p className="text-red-700 text-sm mb-3">
+                You must be logged in to create a booking. Your booking will be saved to your account.
+              </p>
+              <button
+                onClick={() => navigate('/login', { state: { from: location } })}
+                className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+              >
+                Login to Continue
+              </button>
+            </div>
+          ) : (
+            <>
+              <PaymentButton 
+                bookingData={formData} 
+                isSubmitting={isSubmitting}
+              />
+              
+              <p className="text-xs text-gray-500 text-center">
+                🔒 Your payment is secured by Stripe. No card details are stored on our servers.
+              </p>
+            </>
+          )}
         </div>
       </div>
 
@@ -308,7 +447,7 @@ const BookingForm = () => {
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              🏨 Complete Your Booking
+              Complete Your Booking
             </h1>
             <div className="flex justify-center items-center space-x-4 mb-4">
               <div className={`flex items-center ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>

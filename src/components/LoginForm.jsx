@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Toast from './Toast';
+import { useToast } from '../hooks/useToast';
 
 const LoginForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
+  const { toasts, showSuccess, showError, hideToast } = useToast();
   
   const [formData, setFormData] = useState({
     email: '',
@@ -69,8 +72,10 @@ const LoginForm = () => {
       
       if (result.success) {
         console.log('✅ Login successful!');
-        alert('Login successful! Redirecting...');
-        navigate(from, { replace: true });
+        showSuccess('Login successful! Redirecting...');
+        setTimeout(() => {
+          navigate(from, { replace: true });
+        }, 1500); // Give time for user to see the toast
       } else {
         console.log('❌ Login failed:', result.error);
         setErrors({ form: result.error });
@@ -218,6 +223,17 @@ const LoginForm = () => {
           </Link>
         </p>
       </div>
+      
+      {/* Toast notifications */}
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          duration={toast.duration}
+          onClose={() => hideToast(toast.id)}
+        />
+      ))}
     </div>
   );
 };
