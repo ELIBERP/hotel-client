@@ -27,16 +27,16 @@ const Header = () => {
           <Link className="text-[#0e151b] text-sm font-medium leading-normal hover:text-[#47a6ea] transition-colors" to="/stays">
             Stays
           </Link>
-          <a className="text-[#0e151b] text-sm font-medium leading-normal hover:text-[#47a6ea] transition-colors" href="#flights">
+          <a className="text-[#0e151b] text-sm font-medium leading-normal hover:text-[#47a6ea] transition-colors">
             Flights
           </a>
-          <a className="text-[#0e151b] text-sm font-medium leading-normal hover:text-[#47a6ea] transition-colors" href="#car-rentals">
+          <a className="text-[#0e151b] text-sm font-medium leading-normal hover:text-[#47a6ea] transition-colors">
             Car rentals
           </a>
-          <a className="text-[#0e151b] text-sm font-medium leading-normal hover:text-[#47a6ea] transition-colors" href="#attractions">
+          <a className="text-[#0e151b] text-sm font-medium leading-normal hover:text-[#47a6ea] transition-colors">
             Attractions
           </a>
-          <Link className="text-[#0e151b] text-sm font-medium leading-normal hover:text-[#47a6ea] transition-colors" to="/about">
+          <Link className="text-[#0e151b] text-sm font-medium leading-normal hover:text-[#47a6ea] transition-colors">
             About
           </Link>
         </div>
@@ -69,7 +69,7 @@ const Header = () => {
               </Link>
             </>
           )}
-          <button
+          {/* <button
             className="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 bg-[#e7eef3] text-[#0e151b] gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5"
           >
             <div className="text-[#0e151b]" data-icon="Globe" data-size="20px" data-weight="regular">
@@ -79,7 +79,7 @@ const Header = () => {
                 ></path>
               </svg>
             </div>
-          </button>
+          </button> */}
           {isAuthenticated() && (
             <div
               className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"

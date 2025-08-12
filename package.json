@@ -12,13 +12,17 @@
     "test:coverage": "jest --coverage",
     "test:payment": "jest --config=jest.config.payment.js",
     "test:payment:watch": "jest --config=jest.config.payment.js --watch",
-    "test:payment:coverage": "jest --config=jest.config.payment.js --coverage"
+    "test:payment:coverage": "jest --config=jest.config.payment.js --coverage",
+    "test-vitest": "vitest",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.7",
     "@stripe/react-stripe-js": "^3.8.0",
     "@stripe/stripe-js": "^7.6.1",
     "@tailwindcss/vite": "^4.1.11",
+    "fuzzysort": "^3.1.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.3",
@@ -34,8 +38,11 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
-    "@vitejs/plugin-react": "^4.4.1",
+    "@vitejs/plugin-react": "^4.7.0",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "@vitest/ui": "^3.2.4",
     "babel-jest": "^30.0.5",
+    "cypress": "^14.5.4",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
@@ -43,7 +50,9 @@
     "jest": "^30.0.5",
     "jest-environment-jsdom": "^30.0.5",
     "jsdom": "^26.1.0",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "vite-plugin-env-compatible": "^2.0.1",
+    "vitest": "^3.2.4"
   },
   "comments": "Jest config moved to jest.config.js"
 }

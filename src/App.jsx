@@ -27,7 +27,7 @@ const App = () => {
   return (
     <AuthProvider>
       <Router>
-        <div className="relative flex size-full min-h-screen flex-col bg-slate-50 group/design-root overflow-x-hidden" style={{fontFamily: '"Plus Jakarta Sans", "Noto Sans", sans-serif'}}>
+        <div className="relative flex size-full h-screen flex-col bg-slate-50 group/design-root overflow-x-hidden" style={{fontFamily: '"Plus Jakarta Sans", "Noto Sans", sans-serif'}}>
           <div className="layout-container flex h-full grow flex-col">
             <Header />
             <main className="flex-1">
