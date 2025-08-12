@@ -9,7 +9,7 @@ import useOutsideClick from '../hooks/useOutsideClick';
 import React, { useEffect, useState } from 'react';
 import Skeleton from '../components/Skeleton';
 import Spinner from '../components/Spinner';
-import { AMENITY_MAP, roomAmenityKeys } from '../constants/amenities';
+import { roomAmenityKeys } from '../constants/amenities';
 import AmenityChip from '../components/AmenityChip';
 import CatHotelImage from '../assets/CatHotelImage.svg';
 import { parseNearby } from '../utils/parseNearby';
