@@ -1,74 +1,94 @@
 // components/RoomGrid.jsx
 import React from 'react';
+import AmenityChip from './AmenityChip';
 
-const RoomGrid = ({ rooms, loading, onRoomClick }) => {
+const formatBreakfast = (code) => {
+  switch (code) {
+    case 'hotel_detail_room_only':
+      return 'Not included';
+    case 'hotel_detail_breakfast_included':
+      return 'Included';
+    case 'hotel_detail_breakfast_available':
+    case 'hotel_detail_breakfast_optional':
+      return 'Available (extra charge)';
+    default:
+      return 'Not included';
+  }
+};
 
+const RoomGrid = ({ rooms = [], loading = false, onRoomClick, roomHideKeys }) => {
   const extractBedAndSize = (long_description) => {
     if (!long_description) return { bedInfo: '', sizeInfo: '' };
-
     const div = document.createElement('div');
     div.innerHTML = long_description;
-
     const pTags = div.querySelectorAll('p');
-
     const bedInfo = pTags[0]?.textContent || '';
-    const sizeInfo = pTags[1]?.textContent || ''; // usually "409-sq-foot room with courtyard views"
-
+    const sizeInfo = pTags[1]?.textContent || '';
     return { bedInfo, sizeInfo };
   };
 
-
-  if (loading) return <p>Loading room details...</p>;
-
-  if (rooms.length === 0) {
+  if (loading) return null;
+  if (!Array.isArray(rooms) || rooms.length === 0) {
     return <p>No rooms available for selected filter.</p>;
   }
 
+  const hideSet =
+    roomHideKeys instanceof Set
+      ? roomHideKeys
+      : new Set(Array.isArray(roomHideKeys) ? roomHideKeys : []);
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      {rooms.map((room, idx) => (
-        <div key={idx} className="border rounded-2xl overflow-hidden shadow-sm">
-          <img
-            src={room.images?.[0]?.high_resolution_url || room.images?.[0]?.url}
-            alt={`Room ${idx}`}
-            className="h-48 w-full object-cover"
-          />
-          <div className="p-4">
-            <h3 className="font-semibold text-lg text-[#0e151b] mb-1">
-              {room.roomDescription || 'Room Name Placeholder'}
-            </h3>
-            {(() => {
-    const { bedInfo, sizeInfo } = extractBedAndSize(room.long_description);
-            const breakfastRaw = room.roomAdditionalInfo?.breakfastInfo;
-            const breakfast =
-              breakfastRaw === 'hotel_detail_room_only'
-                ? 'No breakfast'
-                : breakfastRaw
-                  ? 'Breakfast included'
-                  : '—';
+      {rooms.map((room, idx) => {
+        const { bedInfo, sizeInfo } = extractBedAndSize(room?.long_description);
+        const breakfastLabel = formatBreakfast(room?.roomAdditionalInfo?.breakfastInfo);
 
-            return (
+        const keys = Array.isArray(room?.importantAmenityKeys) ? room.importantAmenityKeys : [];
+        const visible = keys.filter(k => !hideSet.has(k)).slice(0, 6);
+
+        return (
+          <div key={idx} className="border rounded-2xl shadow-sm">
+            <div className="h-48 overflow-hidden rounded-t-2xl">
+              <img
+                src={room?.images?.[0]?.high_resolution_url || room?.images?.[0]?.url}
+                alt={`Room ${idx}`}
+                className="h-48 w-full object-cover"
+              />
+            </div>
+
+            <div className="p-4">
+              <h3 className="font-semibold text-lg text-[#0e151b] mb-1">
+                {room?.roomDescription || 'Room Name Placeholder'}
+              </h3>
+
               <div className="text-sm text-gray-600 space-y-1 mb-3">
                 <p>{bedInfo}</p>
                 <p>{sizeInfo}</p>
-                <p>{breakfast}</p>
-                <p>{room.free_cancellation ? 'Free cancellation' : 'No cancellation'}</p>
+                <p>Breakfast: {breakfastLabel}</p>
+                <p>{room?.free_cancellation ? 'Free cancellation' : 'No cancellation'}</p>
                 <p>
-                  Price: <strong>{room.converted_price} {room.converted_price ? 'SGD' : ''}</strong>
+                  Price: <strong>{room?.converted_price} {room?.converted_price ? 'SGD' : ''}</strong>
                 </p>
               </div>
-            );
-          })()}
-          
-            <button 
-              onClick={() => onRoomClick(room)} 
-              className="px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200 text-sm font-medium"
-            >
-              View Details
-            </button>
+
+              {visible.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {visible.map(k => (
+                    <AmenityChip key={k} k={k} size="sm" withTooltip />
+                  ))}
+                </div>
+              )}
+
+              <button
+                onClick={() => onRoomClick?.(room)}
+                className="px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200 text-sm font-medium"
+              >
+                View Details
+              </button>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
