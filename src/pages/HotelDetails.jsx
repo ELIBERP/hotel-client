@@ -9,9 +9,13 @@ import useOutsideClick from '../hooks/useOutsideClick';
 import React, { useEffect, useState } from 'react';
 import Skeleton from '../components/Skeleton';
 import Spinner from '../components/Spinner';
+import { AMENITY_MAP, roomAmenityKeys } from '../constants/amenities';
+import AmenityChip from '../components/AmenityChip';
+import CatHotelImage from '../assets/CatHotelImage.svg';
 
+const FALLBACK = CatHotelImage; 
 const MIN_LOADING_MS = 100;
-const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
 
 const HotelHeaderSkeleton = () => (
   <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-6">
@@ -62,7 +66,8 @@ const HotelDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  
+  const [hotelAmenityKeys, setHotelAmenityKeys] = useState([]);   // for icons under the description
+  const [roomHideKeys, setRoomHideKeys] = useState(new Set());    // common across all rooms
   const nearbyHotels = location.state?.nearbyHotels || [];
   const mapModalRef = useRef(null);
   const descModalRef = useRef(null);
@@ -96,7 +101,6 @@ const HotelDetails = () => {
   //const country_code = queryParams.get('country_code');
   const country_code = 'SG';
   const lang = queryParams.get('lang');
-
   // Validate required query parameters
   if (!destination_id || !checkin || !checkout || !guests || !currency || !country_code || !lang) {
     return <div>Error: Missing required query parameters</div>;
@@ -118,7 +122,6 @@ const HotelDetails = () => {
     if (selectedFilter === 'all') return true;
     if (selectedFilter === '1') return bedCount === 1;
     if (selectedFilter === '2') return bedCount === 2;  
-
     return true;
   });
 
@@ -222,23 +225,50 @@ const HotelDetails = () => {
         if (cancelled) return;
 
         // Prepare images safely
+        // images (safe)
         const prefix = hotelData?.image_details?.prefix || '';
         const suffix = hotelData?.image_details?.suffix || '';
-        const hires = typeof hotelData?.hires_image_index === 'string' ? hotelData.hires_image_index : '';
+        const hires  = typeof hotelData?.hires_image_index === 'string' ? hotelData.hires_image_index : '';
         const indices = hires.split(',').map(s => s.trim()).filter(Boolean);
-        const imageUrls = (prefix && suffix) ? indices.map(index => `${prefix}${index}${suffix}`) : [];
+        const imageUrls = (prefix && suffix) ? indices.map(i => `${prefix}${i}${suffix}`) : [];
 
-        // Enforce minimum loading time
-        const elapsed = performance.now() - start;
-        if (elapsed < MIN_LOADING_MS) {
-          await delay(MIN_LOADING_MS - elapsed);
-          if (cancelled) return;
-        }
+        // rooms + annotate with important amenity keys (handles null/undefined/[])
+        const rawRooms = Array.isArray(roomsData?.rooms) ? roomsData.rooms : [];
+        const roomsWithAmenityKeys = rawRooms.map(r => ({
+          ...r,
+          importantAmenityKeys: roomAmenityKeys(r?.amenities), // -> ['wifi','hairDryer',...]
+        }));
 
-        // Hydrate the new content
+        // keys common across all rooms (empty Set if none/rooms=[])
+        const commonAcrossRooms = roomsWithAmenityKeys.length
+          ? roomsWithAmenityKeys
+              .map(r => new Set(r.importantAmenityKeys || []))
+              .reduce((acc, set) => {
+                if (!acc) return set;
+                return new Set([...acc].filter(k => set.has(k)));
+              }, null)
+          : new Set();
+
+        // hotel-level booleans you want to show (from /hotels/:id)
+        const a = hotelData?.amenities || {};
+        const hotelBooleanKeys = [
+          a.continentalBreakfast ? 'continentalBreakfast' : null,
+          a.parkingGarage ? 'parkingGarage' : null,
+          a.dryCleaning ? 'dryCleaning' : null,
+        ].filter(Boolean);
+
+        // final hotel icon keys: hotel booleans + anything common to all rooms
+        const hotelKeys = Array.from(new Set([...hotelBooleanKeys, ...commonAcrossRooms]));
+   
+        // hydrate UI
         setHotel(hotelData);
         setImages(imageUrls);
-        setRooms(Array.isArray(roomsData?.rooms) ? roomsData.rooms : []);
+        setRooms(roomsWithAmenityKeys);
+        setHotelAmenityKeys(hotelKeys);
+        setRoomHideKeys(new Set(hotelBooleanKeys));
+        console.log('hotelAmenityKeys', hotelAmenityKeys);
+        console.log('roomHideKeys', Array.from(roomHideKeys || []));
+        console.log('roomsWithAmenityKeys', roomsWithAmenityKeys.map(r => r.importantAmenityKeys));
       } catch (err) {
         if (!cancelled) console.error(err);
       } finally {
@@ -270,8 +300,10 @@ const HotelDetails = () => {
         </div>
       </div>
     );
+    
   }
-
+  const firstImage = Array.isArray(images) && images[0] ? images[0] : null;
+  const mainImageUrl = firstImage || FALLBACK;
   return (
     <div>
       <div>
@@ -290,16 +322,18 @@ const HotelDetails = () => {
           </div>
           <h1 className="text-2xl font-bold text-[#0e151b] mb-6">{hotel.name}</h1>
           <div className="flex flex-col md:flex-row gap-8 mb-6">
-            {images[0] ? (
+            <div className="rounded-xl w-full md:w-[600px] h-[350px] overflow-hidden">
               <img
-                src={images[0]}
+                src={mainImageUrl}
                 alt="Main Hotel View"
-                className="rounded-xl w-full md:w-[600px] h-[350px] object-cover"
+                className="w-full h-full object-cover"
                 loading="lazy"
+                onError={(e) => {
+                  e.currentTarget.onerror = null; // prevent loop
+                  e.currentTarget.src = FALLBACK;
+                }}
               />
-            ) : (
-              <Skeleton className="rounded-xl w-full md:w-[600px] h-[350px]" />
-            )}
+            </div>
 
             <div className="flex flex-col justify-start md:w-1/2">
               <h2 className="text-xl font-semibold text-[#0e151b] mb-2">About this place</h2>
@@ -326,13 +360,21 @@ const HotelDetails = () => {
                   <Skeleton className="h-4 w-3/6 rounded" />
                 </>
               )}
-
               <button
                 onClick={() => setShowDescriptionModal(true)}
                 className="mt-2 text-sm text-[#1a73e8] underline self-start"
               >
                 View more details...
               </button>
+
+              {hotelAmenityKeys.length > 0 && (
+                <section className="mt-6">
+                  <h3 className="text-xl font-semibold text-[#0e151b] mb-2">Hotel Amenities</h3>
+                  <div className="flex flex-wrap gap-2" aria-label="Hotel amenities">
+                    {hotelAmenityKeys.map(k => <AmenityChip key={k} k={k} size="lg" />)}
+                  </div>
+                </section>
+              )}
             </div>
           </div>
 
@@ -341,7 +383,11 @@ const HotelDetails = () => {
               {images.map((url, idx) => (
                 <img
                   key={idx}
-                  src={url}
+                  src={url || CatHotelImage}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = CatHotelImage;
+                  }}
                   alt={`Hotel image ${idx + 1}`}
                   className="w-48 h-32 object-cover rounded-xl flex-shrink-0"
                   loading="lazy"
@@ -412,7 +458,9 @@ const HotelDetails = () => {
             <RoomGrid
               rooms={filteredRooms}
               loading={loadingRooms}
-              onRoomClick={(room) => setSelectedRoom(room)}
+              onRoomClick={(room) => setSelectedRoom(room)} 
+              roomHideKeys={roomHideKeys}
+              
             />
           )}
         </div>
@@ -527,46 +575,51 @@ const HotelDetails = () => {
       )}
       </div>
       {nearbyHotels.length > 1 && (
-      <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-10">
-        <h2 className="text-2xl font-bold text-[#0e151b] mb-4">Other Hotels You Might Like</h2>
-        <div className="flex overflow-x-auto gap-4 [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {nearbyHotels
-            .filter(h => String(h.id) !== String(id)) // Exclude the current hotel
-            .slice(0, 3) // Limit to 3 hotels
-            .map(hotel => {
-              const imageUrl = hotel.image_details?.prefix && hotel.hires_image_index
-                ? `${hotel.image_details.prefix}${hotel.hires_image_index.split(',')[0].trim()}${hotel.image_details.suffix}`
-                : 'https://dummyimage.com/400x300/cccccc/000000&text=No+Image';
+        <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-10">
+          <h2 className="text-2xl font-bold text-[#0e151b] mb-4">Other Hotels You Might Like</h2>
+          <div className="flex overflow-x-auto gap-4 [-ms-scrollbar-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {nearbyHotels
+              .filter(h => String(h.id) !== String(id))
+              .slice(0, 3)
+              .map(hotel => {
+                const firstIndex = hotel.hires_image_index?.split(',')[0]?.trim();
+                const primary = (hotel.image_details?.prefix && firstIndex)
+                  ? `${hotel.image_details.prefix}${firstIndex}${hotel.image_details.suffix}`
+                  : null;
 
-              return (
-                <div
-                  key={hotel.id}
-                  onClick={() =>
-                    navigate(`/hotels/${hotel.id}${location.search}`, {
-                      state: { nearbyHotels },
-                    })
-                  }
-                  className="cursor-pointer flex flex-col gap-2 min-w-[220px] rounded-lg shadow-md bg-white hover:shadow-lg transition-shadow duration-200"
-                >
+                // Stack backgrounds: primary first, fallback second
+                const bg = primary
+                  ? `url("${primary}"), url("${CatHotelImage}")`
+                  : `url("${CatHotelImage}")`;
+
+                return (
                   <div
-                    className="w-full aspect-video bg-cover bg-center rounded-t-lg"
-                    style={{ backgroundImage: `url(${imageUrl})` }}
-                  />
-                  <div className="p-4">
-                    <p className="text-[#111518] font-medium text-base hover:underline">
-                      {hotel.name}
-                    </p>
-                    <p className="text-[#637888] text-sm">
-                      From ${hotel.price || '—'} · Rating: {hotel.rating || 'N/A'}
-                    </p>
+                    key={hotel.id}
+                    onClick={() =>
+                      navigate(`/hotels/${hotel.id}${location.search}`, {
+                        state: { nearbyHotels },
+                      })
+                    }
+                    className="cursor-pointer flex flex-col gap-2 min-w-[220px] rounded-lg shadow-md bg-white hover:shadow-lg transition-shadow duration-200"
+                  >
+                    <div
+                      className="w-full aspect-video bg-cover bg-center rounded-t-lg"
+                      style={{ backgroundImage: bg }}
+                    />
+                    <div className="p-4">
+                      <p className="text-[#111518] font-medium text-base hover:underline">
+                        {hotel.name}
+                      </p>
+                      <p className="text-[#637888] text-sm">
+                        From ${hotel.price || '—'} · Rating: {hotel.rating || 'N/A'}
+                      </p>
+                    </div>
                   </div>
-                </div>
-
-              );
-            })}
+                );
+              })}
+          </div>
         </div>
-      </div>
-    )}
+      )}
     </div>
   );
 };
