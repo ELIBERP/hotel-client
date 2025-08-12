@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import ApiService from '../services/api';
 import Map from '../components/Map';
@@ -7,12 +6,63 @@ import RoomGrid from '../components/RoomGrid';
 import { LoadScript } from '@react-google-maps/api';
 import { useRef } from 'react';
 import useOutsideClick from '../hooks/useOutsideClick';
+import React, { useEffect, useState } from 'react';
+import Skeleton from '../components/Skeleton';
+import Spinner from '../components/Spinner';
+
+const MIN_LOADING_MS = 100;
+const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const HotelHeaderSkeleton = () => (
+  <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-6">
+    <div className="w-full border-b border-gray-200 bg-white mb-6">
+      <div className="w-full px-6 sm:px-16 py-4 bg-[#f2f2f4] rounded-xl shadow-sm">
+        <Skeleton className="h-10 w-full rounded-lg" />
+      </div>
+    </div>
+
+    <Skeleton className="h-8 w-64 mb-6 rounded" />
+
+    <div className="flex flex-col md:flex-row gap-8 mb-6">
+      <Skeleton className="w-full md:w-[600px] h-[350px] rounded-xl" />
+      <div className="flex flex-col md:w-1/2 gap-3">
+        <Skeleton className="h-6 w-48 rounded" />
+        <Skeleton className="h-4 w-56 rounded" />
+        <Skeleton className="h-4 w-5/6 rounded" />
+        <Skeleton className="h-4 w-4/6 rounded" />
+        <Skeleton className="h-4 w-3/6 rounded" />
+        <div className="mt-2">
+          <Skeleton className="h-4 w-36 rounded" />
+        </div>
+      </div>
+    </div>
+
+   
+  </div>
+);
+
+const RoomGridSkeleton = ({ count = 6 }) => (
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    {Array.from({ length: count }).map((_, i) => (
+      <div key={i} className="rounded-xl border bg-white p-4 shadow-sm">
+        <Skeleton className="w-full h-40 rounded-lg mb-3" />
+        <Skeleton className="h-5 w-3/4 rounded mb-2" />
+        <Skeleton className="h-4 w-2/3 rounded mb-2" />
+        <Skeleton className="h-4 w-1/2 rounded mb-4" />
+        <div className="flex justify-end">
+          <Skeleton className="h-9 w-28 rounded-full" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
 
 
 const HotelDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  
   const nearbyHotels = location.state?.nearbyHotels || [];
   const mapModalRef = useRef(null);
   const descModalRef = useRef(null);
@@ -139,46 +189,88 @@ const HotelDetails = () => {
   };
 
   useEffect(() => {
-    // First API call: get hotel details and images
-    ApiService.getHotelById(id)
-      .then((data) => {
-        setHotel(data);
+    let cancelled = false;
 
-        const { prefix, suffix } = data.image_details;
-        const indices = data.hires_image_index
-          .split(',')
-          .map((str) => str.trim())
-          .filter((str) => str !== '');
+    const load = async () => {
+      // Immediately reset UI so old details don't flash
+      setShowDescriptionModal(false);
+      setHotel(null);          // triggers your skeleton + spinner
+      setImages([]);
+      setRooms([]);
+      setLoadingRooms(true);
 
-        const imageUrls = indices.map((index) => `${prefix}${index}${suffix}`);
+      const start = performance.now();
+
+      // Build query once
+      const query = {
+        destination_id,
+        checkin,
+        checkout,
+        guests,
+        currency,
+        country_code,
+        lang,
+        partner_id: 1,
+      };
+
+      try {
+        // Fetch both in parallel
+        const [hotelData, roomsData] = await Promise.all([
+          ApiService.getHotelById(id),
+          ApiService.getHotelRoomsByID(id, query),
+        ]);
+        if (cancelled) return;
+
+        // Prepare images safely
+        const prefix = hotelData?.image_details?.prefix || '';
+        const suffix = hotelData?.image_details?.suffix || '';
+        const hires = typeof hotelData?.hires_image_index === 'string' ? hotelData.hires_image_index : '';
+        const indices = hires.split(',').map(s => s.trim()).filter(Boolean);
+        const imageUrls = (prefix && suffix) ? indices.map(index => `${prefix}${index}${suffix}`) : [];
+
+        // Enforce minimum loading time
+        const elapsed = performance.now() - start;
+        if (elapsed < MIN_LOADING_MS) {
+          await delay(MIN_LOADING_MS - elapsed);
+          if (cancelled) return;
+        }
+
+        // Hydrate the new content
+        setHotel(hotelData);
         setImages(imageUrls);
-      })
-      .catch((err) => console.error(err));
-
-    // Second API call: get hotel rooms with dynamic query
-    const query = {
-      destination_id,
-      checkin,
-      checkout,
-      guests,
-      currency,
-      country_code,
-      lang,
-      partner_id: 1, // Static partner_id
+        setRooms(Array.isArray(roomsData?.rooms) ? roomsData.rooms : []);
+      } catch (err) {
+        if (!cancelled) console.error(err);
+      } finally {
+        if (!cancelled) setLoadingRooms(false);
+      }
     };
 
-    ApiService.getHotelRoomsByID(id, query)
-      .then((data) => {
-        setRooms(data.rooms);
-      })
-      .catch((err) => console.error(err))
-      .finally(() => {
-        setLoadingRooms(false);
-      });
-
+    load();
+    return () => { cancelled = true; };
   }, [id, destination_id, checkin, checkout, guests, currency, country_code, lang]);
 
-  if (!hotel) return <div>Loading hotel details...</div>;
+  if (!hotel) {
+    return (
+      <div className="animate-fade-in relative min-h-[70vh]">
+        {/* Centered spinner overlay */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+            <Spinner size={36} className="text-blue-500" />
+        </div>
+
+        <HotelHeaderSkeleton />
+        <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-10">
+          <h2 className="text-2xl font-bold text-[#0e151b] mb-4">Choose your room</h2>
+          <div className="flex gap-4 mb-6">
+            <Skeleton className="h-9 w-28 rounded-full" />
+            <Skeleton className="h-9 w-24 rounded-full" />
+            <Skeleton className="h-9 w-24 rounded-full" />
+          </div>
+          <RoomGridSkeleton count={6} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -198,22 +290,43 @@ const HotelDetails = () => {
           </div>
           <h1 className="text-2xl font-bold text-[#0e151b] mb-6">{hotel.name}</h1>
           <div className="flex flex-col md:flex-row gap-8 mb-6">
-            <img
-              src={images[0]}
-              alt="Main Hotel View"
-              className="rounded-xl w-full md:w-[600px] h-[350px] object-cover"
-            />
+            {images[0] ? (
+              <img
+                src={images[0]}
+                alt="Main Hotel View"
+                className="rounded-xl w-full md:w-[600px] h-[350px] object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <Skeleton className="rounded-xl w-full md:w-[600px] h-[350px]" />
+            )}
+
             <div className="flex flex-col justify-start md:w-1/2">
               <h2 className="text-xl font-semibold text-[#0e151b] mb-2">About this place</h2>
-              <button
-                onClick={() => setShowMapModal(true)}
-                className="text-sm text-[#1a73e8] underline mb-2 text-left"
-              >
-                📍 {hotel.address}
-              </button>
-              <p className="text-sm text-[#0e151b] leading-relaxed max-w-lg">
-                {hotel.description?.split('. ').slice(0, 3).join('. ') + '.'}
-              </p>
+
+              {hotel.address ? (
+                <button
+                  onClick={() => setShowMapModal(true)}
+                  className="text-sm text-[#1a73e8] underline mb-2 text-left"
+                >
+                  📍 {hotel.address}
+                </button>
+              ) : (
+                <Skeleton className="h-4 w-56 rounded mb-2" />
+              )}
+
+              {hotel.description ? (
+                <p className="text-sm text-[#0e151b] leading-relaxed max-w-lg">
+                  {hotel.description.split('. ').slice(0, 3).join('. ') + '.'}
+                </p>
+              ) : (
+                <>
+                  <Skeleton className="h-4 w-5/6 rounded mb-2" />
+                  <Skeleton className="h-4 w-4/6 rounded mb-2" />
+                  <Skeleton className="h-4 w-3/6 rounded" />
+                </>
+              )}
+
               <button
                 onClick={() => setShowDescriptionModal(true)}
                 className="mt-2 text-sm text-[#1a73e8] underline self-start"
@@ -222,16 +335,21 @@ const HotelDetails = () => {
               </button>
             </div>
           </div>
-          <div className="flex gap-4 overflow-x-auto py-4">
-            {images.map((url, idx) => (
-              <img
-                key={idx}
-                src={url}
-                alt={`Hotel image ${idx + 1}`}
-                className="w-48 h-32 object-cover rounded-xl flex-shrink-0"
-              />
-            ))}
-          </div>
+
+          {images.length > 0 && (
+            <div className="flex gap-4 overflow-x-auto py-4">
+              {images.map((url, idx) => (
+                <img
+                  key={idx}
+                  src={url}
+                  alt={`Hotel image ${idx + 1}`}
+                  className="w-48 h-32 object-cover rounded-xl flex-shrink-0"
+                  loading="lazy"
+                />
+              ))}
+            </div>
+          )}
+          
         </div>
         {showDescriptionModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -257,8 +375,13 @@ const HotelDetails = () => {
 
         {/* <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLEMAP_API_KEY}> */}
         {/* I really shouldnt expose this haha */}
-        { !googleApiLoaded && (
-          <LoadScript googleMapsApiKey={"AIzaSyAMA3VTBdscv_40tdyz0X4kfJKPG2i97QM"} onLoad={() => setGoogleApiLoaded(true)} >
+        {!googleApiLoaded && (
+          <LoadScript
+            googleMapsApiKey={"AIzaSyAMA3VTBdscv_40tdyz0X4kfJKPG2i97QM"}
+            onLoad={() => setGoogleApiLoaded(true)}
+            loadingElement={<></>}         // 👈 hides the default "Loading..."
+            // or: loading={<></>}         // 👈 if your version uses `loading`
+          >
             <div style={{ display: 'none' }}>
               <Map coordinates={{ lat: hotel.latitude, lng: hotel.longitude }} height="0px" />
             </div>
@@ -283,11 +406,15 @@ const HotelDetails = () => {
           </div>
 
           {/* Grid of Room Cards */}
-          <RoomGrid 
-            rooms={filteredRooms} 
-            loading={loadingRooms} 
-            onRoomClick={(room) => setSelectedRoom(room)} 
-          />
+          {loadingRooms ? (
+            <RoomGridSkeleton count={6} />
+          ) : (
+            <RoomGrid
+              rooms={filteredRooms}
+              loading={loadingRooms}
+              onRoomClick={(room) => setSelectedRoom(room)}
+            />
+          )}
         </div>
 
 
