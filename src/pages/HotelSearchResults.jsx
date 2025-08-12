@@ -4,22 +4,7 @@ import destinations from '../assets/destinations.json';
 import StarRating from '../components/StarRating';
 import { Link, useLocation } from 'react-router-dom';
 import ApiService from '../services/api';
-
-// Amenity icon/label mapping (Material Icons)
-const AMENITY_MAP = {
-  airConditioning: { label: 'A/C', icon: 'ac_unit' },
-  clothingIron: { label: 'Iron', icon: 'iron' },
-  continentalBreakfast: { label: 'Breakfast', icon: 'free_breakfast' },
-  dataPorts: { label: 'Data', icon: 'settings_ethernet' },
-  dryCleaning: { label: 'Dry Cleaning', icon: 'local_laundry_service' },
-  hairDryer: { label: 'Hair Dryer', icon: 'dry' },
-  miniBarInRoom: { label: 'Mini Bar', icon: 'local_bar' },
-  outdoorPool: { label: 'Pool', icon: 'pool' },
-  parkingGarage: { label: 'Parking', icon: 'local_parking' },
-  roomService: { label: 'Room Service', icon: 'room_service' },
-  safe: { label: 'Safe', icon: 'lock' },
-  tVInRoom: { label: 'TV', icon: 'tv' }
-};
+import { AMENITY_MAP } from '../constants/amenities';
 
 // Main hotel search results component
 const HotelSearchResults = () => {
