@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test-vitest": "vitest"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.7",
