@@ -7,12 +7,8 @@ const isTestEnvironment = typeof process !== 'undefined' && process.env.NODE_ENV
 // For tests, use process.env fallbacks. For Vite, the build system will handle import.meta.env
 const config = {
   // API Configuration
-  apiBaseUrl: isTestEnvironment 
-    ? (process.env.VITE_API_BASE_URL || 'http://localhost:3000')
-    : 'http://localhost:3000', // Default for tests, Vite will replace this
-  apiTimeout: isTestEnvironment 
-    ? parseInt(process.env.VITE_API_TIMEOUT || '10000')
-    : 10000,
+  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
+  apiTimeout: parseInt(import.meta.env.VITE_API_TIMEOUT) || 10000,
   
   // App Information
   appName: isTestEnvironment 
