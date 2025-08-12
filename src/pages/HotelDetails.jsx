@@ -375,8 +375,13 @@ const HotelDetails = () => {
 
         {/* <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLEMAP_API_KEY}> */}
         {/* I really shouldnt expose this haha */}
-        { !googleApiLoaded && (
-          <LoadScript googleMapsApiKey={"AIzaSyAMA3VTBdscv_40tdyz0X4kfJKPG2i97QM"} onLoad={() => setGoogleApiLoaded(true)} >
+        {!googleApiLoaded && (
+          <LoadScript
+            googleMapsApiKey={"AIzaSyAMA3VTBdscv_40tdyz0X4kfJKPG2i97QM"}
+            onLoad={() => setGoogleApiLoaded(true)}
+            loadingElement={<></>}         // 👈 hides the default "Loading..."
+            // or: loading={<></>}         // 👈 if your version uses `loading`
+          >
             <div style={{ display: 'none' }}>
               <Map coordinates={{ lat: hotel.latitude, lng: hotel.longitude }} height="0px" />
             </div>
