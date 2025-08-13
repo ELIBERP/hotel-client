@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import ApiService from '../services/api';
 import Map from '../components/Map';
-import SearchBar from '../components/SearchBar';
 import RoomGrid from '../components/RoomGrid';
 import { LoadScript } from '@react-google-maps/api';
 import Skeleton from '../components/Skeleton';
@@ -12,6 +11,7 @@ import AmenityChip from '../components/AmenityChip';
 import CatHotelImage from '../assets/CatHotelImage.svg';
 import { parseNearby } from '../utils/parseNearby';
 import useOutsideClick from '../hooks/useOutsideClick';
+import destinations from '../assets/destinations.json';
 
 const FALLBACK = CatHotelImage; 
 
@@ -75,22 +75,26 @@ const RoomGridSkeleton = ({ count = 6 }) => (
 
 
 const HotelDetails = () => {
+  
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const [primaryImage, setPrimaryImage] = useState(null);
+  const [galleryImages, setGalleryImages] = useState([]); 
+  const [primaryResolved, setPrimaryResolved] = useState(false);
   const [hotelAmenityKeys, setHotelAmenityKeys] = useState([]);   // for icons under the description
   const [roomHideKeys, setRoomHideKeys] = useState(new Set());    // common across all rooms
   const nearbyHotels = location.state?.nearbyHotels || [];
   const mapModalRef = useRef(null);
   const descModalRef = useRef(null);
-  const [hotel, setHotel] = useState(null);
-  const [images, setImages] = useState([]);
+  const [hotel, setHotel] = useState(null);  
   const roomModalRef = useRef(null);
   const [selectedRoom, setSelectedRoom] = useState(null); // for the room modal
   const [rooms, setRooms] = useState([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [showDescriptionModal, setShowDescriptionModal] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const pageTopRef = useRef(null);
   const [showMapModal, setShowMapModal] = useState(false); // for Google map to show in popup
   const [hotelDetails, setHotelDetails] = useState({
     name: '',
@@ -116,6 +120,65 @@ const HotelDetails = () => {
   if (!destination_id || !checkin || !checkout || !guests || !currency || !country_code || !lang) {
     return <div>Error: Missing required query parameters</div>;
   }
+  // Pre-fill destination text from current destination_id
+const selectedDestinationName =
+  destinations.find(d => d.uid === destination_id)?.term || '';
+
+// --- Mini search bar state (same as HotelSearchResults) ---
+const [miniDestInput, setMiniDestInput] = useState(
+  selectedDestinationName !== 'Unknown location' ? selectedDestinationName : ''
+);
+const [miniDestId, setMiniDestId] = useState(destination_id || '');
+const [showDestSuggestions, setShowDestSuggestions] = useState(false);
+
+const [checkinDate, setCheckinDate] = useState(checkin || '');
+const [checkoutDate, setCheckoutDate] = useState(checkout || '');
+
+const [adults, setAdults] = useState(2);
+const [children, setChildren] = useState(0);
+const [roomCount, setRoomCount] = useState(1);
+const [showGuestPicker, setShowGuestPicker] = useState(false);
+
+// Suggestions (same logic as results page)
+const destSuggestions = miniDestInput.length > 1
+  ? destinations
+      .filter(d => d.term && d.term.toLowerCase().includes(miniDestInput.toLowerCase()))
+      .slice(0, 8)
+  : [];
+
+const handleSelectDestination = (d) => {
+  setMiniDestInput(d.term);
+  setMiniDestId(d.uid);
+  setShowDestSuggestions(false);
+};
+
+const adjustAdults   = (delta) => setAdults(a => Math.min(10, Math.max(1, a + delta)));
+const adjustChildren = (delta) => setChildren(c => Math.min(10, Math.max(0, c + delta)));
+const adjustRoomCount = (delta) => setRoomCount(r => Math.min(8, Math.max(1, r + delta)));
+
+const formatGuestsParam = () => {
+  const total = adults + children;
+  if (roomCount <= 1) return String(total);
+  return Array(roomCount).fill(total).join('|');
+};
+
+// Submit: navigate to /hotels (the results page handles fetching/pricing)
+const handleMiniSearch = (e) => {
+  e.preventDefault();
+
+  let destId = miniDestId;
+  if (!destId && destSuggestions.length) destId = destSuggestions[0].uid;
+  if (!destId) return; // require destination
+
+  const qs = new URLSearchParams({
+    destination_id: destId,
+    checkin: checkinDate || '',
+    checkout: checkoutDate || '',
+    guests: formatGuestsParam(),
+  }).toString();
+
+  navigate(`/hotels?${qs}`, { state: { hasSearched: true } });
+};
 
   const extractBedCount = (long_description) => { // to filter by bed count, we extract bed count from long desc
     if (!long_description) return 0;
@@ -126,6 +189,77 @@ const HotelDetails = () => {
     return match ? parseInt(match[1], 10) : 0;
   };
 
+  // Normalize protocol-less prefixes like "//..." to "https://..."
+const normalizePrefix = (p) => (p?.startsWith('//') ? `https:${p}` : (p || ''));
+
+// Build candidate image URLs from API data
+const buildImageUrls = (data, limit = 12) => {
+  const prefixRaw = data?.image_details?.prefix || '';
+  const suffix = data?.image_details?.suffix || '';
+  const prefix = normalizePrefix(prefixRaw);
+
+  // Case 1: use hires_image_index if present
+  const hires = (data?.hires_image_index || '').trim();
+  if (hires) {
+    const idxs = hires
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => /^\d+$/.test(s))
+      .slice(0, limit);
+    return (prefix && suffix) ? idxs.map(i => `${prefix}${i}${suffix}`) : [];
+  }
+
+  // Case 2: fall back to default_image_index + number_of_images
+  const total = Number(data?.number_of_images) || 0;
+  const def = Math.max(1, Number(data?.default_image_index) || 1);
+
+  if (!prefix || !suffix || total <= 0) return [];
+
+  // Order: def..total, then 1..def-1 (so default shows first)
+  const idxs = [];
+  for (let i = def; i <= total && idxs.length < limit; i++) idxs.push(i);
+  for (let i = 1; i < def && idxs.length < limit; i++) idxs.push(i);
+
+  return idxs.map(i => `${prefix}${i}${suffix}`);
+};
+
+// Resolve with the first URL that actually loads
+const preloadFirstWorking = (urls, timeoutMs = 8000) =>
+  new Promise((resolve) => {
+    if (!urls?.length) return resolve(null);
+    let i = 0;
+    const tryNext = () => {
+      if (i >= urls.length) return resolve(null);
+      const url = urls[i++];
+      const img = new Image();
+      const timer = setTimeout(() => {
+        img.onload = img.onerror = null;
+        tryNext();
+      }, timeoutMs);
+      img.onload = () => { clearTimeout(timer); resolve(url); };
+      img.onerror = () => { clearTimeout(timer); tryNext(); };
+      img.src = url;
+    };
+    tryNext();
+  });
+
+  const probeImages = async (urls, limit = 10, timeoutMs = 3500) => {
+    const slice = (urls || []).slice(0, limit);
+    const checks = slice.map((url, idx) =>
+      new Promise((resolve) => {
+        const img = new Image();
+        const timer = setTimeout(() => {
+          img.onload = img.onerror = null;
+          resolve({ url, ok: false, idx });
+        }, timeoutMs);
+        img.onload = () => { clearTimeout(timer); resolve({ url, ok: true, idx }); };
+        img.onerror = () => { clearTimeout(timer); resolve({ url, ok: false, idx }); };
+        img.src = url;
+      })
+    );
+    const results = await Promise.all(checks);
+    return results.filter(r => r.ok).sort((a,b) => a.idx - b.idx).map(r => r.url);
+  };
   const filteredRooms = rooms.filter((room) => {
     const bedCount = extractBedCount(room.long_description);
     if (selectedFilter === 'all') return true;
@@ -146,10 +280,34 @@ const HotelDetails = () => {
   };
 }, [showDescriptionModal]);
 
-  // for page refresh when choosing another hotel under recommendation
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [id]);
+    pageTopRef.current?.scrollIntoView({ behavior: 'auto', block: 'start' });
+
+    // Fallbacks in case a browser ignores scrollIntoView for nested containers
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [location.key]);
+
+  useEffect(() => {
+  // Close any open modals
+  setShowDescriptionModal(false);
+  setSelectedRoom(null);
+
+  // Clear hotel header + images so header skeleton shows
+  setHotel(null);
+
+  // Clear rooms so the grid skeleton shows
+  setRooms([]);
+  setLoadingRooms(true);
+
+  // Clear amenity-derived UI so old chips don't flash
+  setHotelAmenityKeys([]);
+  setRoomHideKeys(new Set());
+  setPrimaryImage(null);   
+  setGalleryImages([]); 
+  setPrimaryResolved(false);  
+}, [id, location.key]);
+
 
 
   // Update hotelDetails object based on the first room in rooms
@@ -192,89 +350,100 @@ const HotelDetails = () => {
   useEffect(() => {
     let cancelled = false;
 
-    const load = async () => {
-      // Immediately reset UI so old details don't flash
-      setShowDescriptionModal(false);
-      setHotel(null);          // triggers your skeleton + spinner
-      setImages([]);
-      setRooms([]);
-      setLoadingRooms(true);
-
-      // Build query once
-      const query = {
-        destination_id,
-        checkin,
-        checkout,
-        guests,
-        currency,
-        country_code,
-        lang,
-        partner_id: 1,
-      };
-
+    (async () => {
       try {
-        // Fetch both in parallel
-        const [hotelData, roomsData] = await Promise.all([
-          ApiService.getHotelById(id),
-          ApiService.getHotelRoomsByID(id, query),
-        ]);
+        const hotelData = await ApiService.getHotelById(id);
         if (cancelled) return;
 
-        // Prepare images safely
-        // images (safe)
-        const prefix = hotelData?.image_details?.prefix || '';
-        const suffix = hotelData?.image_details?.suffix || '';
-        const hires  = typeof hotelData?.hires_image_index === 'string' ? hotelData.hires_image_index : '';
-        const indices = hires.split(',').map(s => s.trim()).filter(Boolean);
-        const imageUrls = (prefix && suffix) ? indices.map(i => `${prefix}${i}${suffix}`) : [];
-
-        // rooms + annotate with important amenity keys (handles null/undefined/[])
-        const rawRooms = Array.isArray(roomsData?.rooms) ? roomsData.rooms : [];
-        const roomsWithAmenityKeys = rawRooms.map(r => ({
-          ...r,
-          importantAmenityKeys: roomAmenityKeys(r?.amenities), // -> ['wifi','hairDryer',...]
-        }));
-
-        // keys common across all rooms (empty Set if none/rooms=[])
-        const commonAcrossRooms = roomsWithAmenityKeys.length
-          ? roomsWithAmenityKeys
-              .map(r => new Set(r.importantAmenityKeys || []))
-              .reduce((acc, set) => {
-                if (!acc) return set;
-                return new Set([...acc].filter(k => set.has(k)));
-              }, null)
-          : new Set();
-
-        // hotel-level booleans you want to show (from /hotels/:id)
-        const a = hotelData?.amenities || {};
-        const hotelBooleanKeys = [
-          a.continentalBreakfast ? 'continentalBreakfast' : null,
-          a.parkingGarage ? 'parkingGarage' : null,
-          a.dryCleaning ? 'dryCleaning' : null,
-        ].filter(Boolean);
-
-        // final hotel icon keys: hotel booleans + anything common to all rooms
-        const hotelKeys = Array.from(new Set([...hotelBooleanKeys, ...commonAcrossRooms]));
-   
-        // hydrate UI
+        // build candidates
+        const imageUrls = buildImageUrls(hotelData);
         setHotel(hotelData);
-        setImages(imageUrls);
-        setRooms(roomsWithAmenityKeys);
-        setHotelAmenityKeys(hotelKeys);
-        setRoomHideKeys(new Set(hotelBooleanKeys));
-        console.log('hotelAmenityKeys', hotelAmenityKeys);
-        console.log('roomHideKeys', Array.from(roomHideKeys || []));
-        console.log('roomsWithAmenityKeys', roomsWithAmenityKeys.map(r => r.importantAmenityKeys));
-      } catch (err) {
-        if (!cancelled) console.error(err);
-      } finally {
-        if (!cancelled) setLoadingRooms(false);
-      }
-    };
+        // header image
+        const primary = await preloadFirstWorking(imageUrls);
+        if (cancelled) return;
 
-    load();
+        setPrimaryImage(primary);
+        setPrimaryResolved(true); // ✅ we’re done deciding the header image
+
+        // gallery = verified working images beyond the header
+        const rest = (imageUrls || []).filter(u => u && u !== primary);
+        const verified = await probeImages(rest, 10, 3500);
+        if (!cancelled) setGalleryImages(verified);
+      } catch (e) {
+        if (!cancelled) {
+          console.error(e);
+          setPrimaryResolved(true); // ✅ fail-safe: stop skeleton, show fallback
+        }
+      }
+    })();
+
     return () => { cancelled = true; };
-  }, [id, destination_id, checkin, checkout, guests, currency, country_code, lang]);
+  }, [id]);
+
+useEffect(() => {
+  let cancelled = false;
+
+  setLoadingRooms(true);
+  setRooms([]);
+
+  const query = {
+    destination_id,
+    checkin,
+    checkout,
+    guests,
+    currency,
+    country_code,
+    lang,
+    partner_id: 1,
+  };
+
+  ApiService.getHotelRoomsByID(id, query)
+    .then((roomsData) => {
+      if (cancelled) return;
+
+      const rawRooms = Array.isArray(roomsData?.rooms) ? roomsData.rooms : [];
+      const roomsWithAmenityKeys = rawRooms.map(r => ({
+        ...r,
+        importantAmenityKeys: roomAmenityKeys(r?.amenities),
+      }));
+
+      setRooms(roomsWithAmenityKeys);
+      
+    })
+    .catch((e) => { if (!cancelled) console.error(e); })
+    .finally(() => { if (!cancelled) setLoadingRooms(false); });
+
+  return () => { cancelled = true; };
+}, [id, destination_id, checkin, checkout, guests, currency, country_code, lang]);
+
+  useEffect(() => {
+    // If hotel not ready yet, clear chips to avoid stale display
+    if (!hotel) {
+      setHotelAmenityKeys([]);
+      setRoomHideKeys(new Set());
+      return;
+    }
+
+    // Keys common across all rooms
+    const commonAcrossRooms = rooms.length
+      ? rooms
+          .map(r => new Set(r.importantAmenityKeys || []))
+          .reduce((acc, set) => (!acc ? set : new Set([...acc].filter(k => set.has(k)))), null)
+      : new Set();
+
+    // Simple hotel-level booleans
+    const a = hotel?.amenities || {};
+    const hotelBooleanKeys = [
+      a.continentalBreakfast ? 'continentalBreakfast' : null,
+      a.parkingGarage ? 'parkingGarage' : null,
+      a.dryCleaning ? 'dryCleaning' : null,
+    ].filter(Boolean);
+
+    setHotelAmenityKeys(Array.from(new Set([...(hotelBooleanKeys), ...commonAcrossRooms])));
+    setRoomHideKeys(new Set(hotelBooleanKeys));
+  }, [hotel, rooms]);
+
+
 
   const longHtml = hotel?.long_description || hotel?.description || '';
   const nearby = React.useMemo(() => parseNearby(longHtml), [longHtml]);
@@ -291,9 +460,7 @@ const htmlToText = (html) => {
 const aboutOnlyHtml = longHtml.split(/Distances are displayed/i)[0] || longHtml;
 const aboutText = htmlToText(aboutOnlyHtml);
 
-// Main image w/ fallback
-const firstImage = Array.isArray(images) && images[0] ? images[0] : null;
-const mainImageUrl = firstImage || FALLBACK;
+
 
   if (!hotel) {
     return (
@@ -320,33 +487,146 @@ const mainImageUrl = firstImage || FALLBACK;
   
   return (
     <div>
+      <div ref={pageTopRef} aria-hidden="true" />
       <div>
         <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-6">
-          <div className="w-full border-b border-gray-200 bg-white mb-6">
-            <div className="w-full px-6 sm:px-16 py-4 bg-[#f2f2f4] rounded-xl shadow-sm">
-              <SearchBar
-                placeholder="Paris, France"
-                size="hotelDetailPage"
-                className="w-full max-w-screen-xl mx-auto"
-                onSearch={() => {
-                  // Search functionality placeholder
-                }}
-              />
-            </div>
+          <div className="w-full max-w-screen-xl mx-auto mb-6">
+            <form
+              onSubmit={handleMiniSearch}
+              className="bg-white/90 border border-gray-200 rounded-2xl shadow p-4 md:p-5 flex flex-col gap-4"
+            >
+              <div className="flex flex-col md:flex-row gap-4">
+                {/* Destination */}
+                <div className="relative md:flex-1">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Destination</label>
+                  <input
+                    type="text"
+                    value={miniDestInput}
+                    onChange={(e)=>{ setMiniDestInput(e.target.value); setShowDestSuggestions(true); }}
+                    onFocus={()=> setShowDestSuggestions(true)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    placeholder="Where to?"
+                  />
+                  {showDestSuggestions && destSuggestions.length > 0 && (
+                    <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow max-h-60 overflow-auto">
+                      {destSuggestions.map(d => (
+                        <button
+                          type="button"
+                          key={d.uid}
+                          onClick={()=>handleSelectDestination(d)}
+                          className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                        >
+                          {d.term}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Dates */}
+                <div className="flex gap-4 md:w-[320px]">
+                  <div className="flex-1">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Check-in</label>
+                    <input
+                      type="date"
+                      value={checkinDate}
+                      onChange={e=>setCheckinDate(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Check-out</label>
+                    <input
+                      type="date"
+                      value={checkoutDate}
+                      onChange={e=>setCheckoutDate(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    />
+                  </div>
+                </div>
+
+                {/* Guests & Rooms */}
+                <div className="relative md:w-56">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Guests & Rooms</label>
+                  <button
+                    type="button"
+                    onClick={()=>setShowGuestPicker(o=>!o)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-left flex justify-between items-center hover:border-gray-400"
+                  >
+                    <span>{adults + children} guests, {roomCount} room{roomCount>1?'s':''}</span>
+                  </button>
+                  {showGuestPicker && (
+                    <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow p-3 text-sm space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span>Adults</span>
+                        <div className="flex items-center gap-2">
+                          <button type="button" onClick={()=>adjustAdults(-1)} className="w-6 h-6 flex items-center justify-center border rounded" aria-label="Decrease adults">-</button>
+                          <span>{adults}</span>
+                          <button type="button" onClick={()=>adjustAdults(1)} className="w-6 h-6 flex items-center justify-center border rounded" aria-label="Increase adults">+</button>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>Children</span>
+                        <div className="flex items-center gap-2">
+                          <button type="button" onClick={()=>adjustChildren(-1)} className="w-6 h-6 flex items-center justify-center border rounded">-</button>
+                          <span>{children}</span>
+                          <button type="button" onClick={()=>adjustChildren(1)} className="w-6 h-6 flex items-center justify-center border rounded">+</button>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>Rooms</span>
+                        <div className="flex items-center gap-2">
+                          <button type="button" onClick={()=>adjustRoomCount(-1)} className="w-6 h-6 flex items-center justify-center border rounded">-</button>
+                          <span>{roomCount}</span>
+                          <button type="button" onClick={()=>adjustRoomCount(1)} className="w-6 h-6 flex items-center justify-center border rounded">+</button>
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <button type="button" onClick={()=>setShowGuestPicker(false)} className="text-xs text-blue-600 font-medium">Done</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Search */}
+                <div className="md:w-32 flex items-end">
+                  <button
+                    type="submit"
+                    className="w-full h-[42px] md:h-[46px] rounded-lg bg-[#47a6ea] hover:bg-[#3690d4] text-white font-semibold text-sm"
+                  >
+                    Search
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
+
           <h1 className="text-2xl font-bold text-[#0e151b] mb-6">{hotel.name}</h1>
           <div className="flex flex-col md:flex-row gap-8 mb-6">
             <div className="rounded-xl w-full md:w-[600px] h-[350px] overflow-hidden">
-              <img
-                src={mainImageUrl}
-                alt="Main Hotel View"
-                className="w-full h-full object-cover"
-                loading="lazy"
-                onError={(e) => {
-                  e.currentTarget.onerror = null; // prevent loop
-                  e.currentTarget.src = FALLBACK;
-                }}
-              />
+              {primaryImage ? (
+                <img
+                  src={primaryImage}
+                  alt="Main Hotel View"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = FALLBACK;
+                  }}
+                />
+              ) : primaryResolved ? (
+                <img
+                  src={FALLBACK}
+                  alt="Main Hotel View"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-full h-full">
+                  <Skeleton className="w-full h-full rounded-xl" />
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col justify-start md:w-1/2">
@@ -394,19 +674,19 @@ const mainImageUrl = firstImage || FALLBACK;
             </div>
           </div>
 
-          {images.length > 0 && (
+          {galleryImages.length > 0 && (
             <div className="flex gap-4 overflow-x-auto py-4">
-              {images.map((url, idx) => (
+              {galleryImages.map((url, idx) => (
                 <img
                   key={idx}
-                  src={url || CatHotelImage}
-                  onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src = CatHotelImage;
-                  }}
-                  alt={`Hotel image ${idx + 1}`}
+                  src={url}
+                  alt={`Hotel image ${idx + 2}`} // +2 because header is #1
                   className="w-48 h-32 object-cover rounded-xl flex-shrink-0"
                   loading="lazy"
+                  onError={(e) => {
+                    // If a verified image somehow fails later, hide that thumb
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
               ))}
             </div>
@@ -495,11 +775,11 @@ const mainImageUrl = firstImage || FALLBACK;
             <RoomGridSkeleton count={6} />
           ) : (
             <RoomGrid
+              key={`${id}-${checkin}-${checkout}-${guests}-${currency}-${lang}`}
               rooms={filteredRooms}
               loading={loadingRooms}
-              onRoomClick={(room) => setSelectedRoom(room)} 
+              onRoomClick={(room) => setSelectedRoom(room)}
               roomHideKeys={roomHideKeys}
-              
             />
           )}
         </div>
@@ -617,15 +897,25 @@ const mainImageUrl = firstImage || FALLBACK;
               .filter(h => String(h.id) !== String(id))
               .slice(0, 3)
               .map(hotel => {
-                const firstIndex = hotel.hires_image_index?.split(',')[0]?.trim();
-                const primary = (hotel.image_details?.prefix && firstIndex)
-                  ? `${hotel.image_details.prefix}${firstIndex}${hotel.image_details.suffix}`
-                  : null;
+                const prefixRaw = hotel.image_details?.prefix || '';
+                const suffix = hotel.image_details?.suffix || '';
+                const prefix = prefixRaw.startsWith('//') ? `https:${prefixRaw}` : prefixRaw;
 
-                // Stack backgrounds: primary first, fallback second
-                const bg = primary
-                  ? `url("${primary}"), url("${CatHotelImage}")`
-                  : `url("${CatHotelImage}")`;
+                let idxs = (hotel.hires_image_index || '')
+                  .split(',')
+                  .map(s => s.trim())
+                  .filter(s => /^\d+$/.test(s));
+
+                if (idxs.length === 0) {
+                  const total = Number(hotel.number_of_images) || 0;
+                  const def = Math.max(1, Number(hotel.default_image_index) || 1);
+                  // Take up to 3 candidates around the default
+                  for (let i = def; i <= total && idxs.length < 3; i++) idxs.push(String(i));
+                  for (let i = 1; i < def && idxs.length < 3; i++) idxs.push(String(i));
+                }
+
+                const candidates = (prefix && suffix) ? idxs.map(i => `${prefix}${i}${suffix}`) : [];
+                const bg = [...candidates, CatHotelImage].map(u => `url("${u}")`).join(', ');
 
                 return (
                   <div
@@ -635,17 +925,27 @@ const mainImageUrl = firstImage || FALLBACK;
                         state: { nearbyHotels },
                       })
                     }
-                    className="cursor-pointer flex flex-col gap-2 min-w-[220px] rounded-lg shadow-md bg-white hover:shadow-lg transition-shadow duration-200"
+                    className="cursor-pointer flex-none flex flex-col gap-2 w-[240px] rounded-xl shadow-md bg-white hover:shadow-lg transition-shadow duration-200"
                   >
                     <div
-                      className="w-full aspect-video bg-cover bg-center rounded-t-lg"
+                      className="w-full aspect-[16/9] bg-cover bg-center rounded-t-xl"
                       style={{ backgroundImage: bg }}
                     />
                     <div className="p-4">
-                      <p className="text-[#111518] font-medium text-base hover:underline">
+                      <p
+                        className="text-[#111518] font-medium text-base hover:underline break-words"
+                        style={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          minHeight: '44px', // ~2 lines at base size
+                          lineHeight: '1.25',
+                        }}
+                      >
                         {hotel.name}
                       </p>
-                      <p className="text-[#637888] text-sm">
+                                            <p className="text-[#637888] text-sm">
                         From ${hotel.price || '—'} · Rating: {hotel.rating || 'N/A'}
                       </p>
                     </div>

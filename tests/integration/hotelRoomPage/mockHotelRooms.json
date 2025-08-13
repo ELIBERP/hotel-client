@@ -1,0 +1,217 @@
+{
+    "searchCompleted": null,
+    "completed": true,
+    "status": null,
+    "currency": null,
+    "rooms": [
+        {
+            "key": "d5680292-b19a-5a73-9e85-f7ecd3414a2b",
+            "roomDescription": "Double Room",
+            "roomNormalizedDescription": "Double Room",
+            "type": "31958",
+            "free_cancellation": true,
+            "long_description": "<p><strong>1 Double Bed</strong></p><p>129 sq feet </p><br/><p><b>Internet</b> - Free WiFi </p><p><b>Entertainment</b> - LCD television with cable channels</p><p><b>Food & Drink</b> - Coffee/tea maker, minibar (fees may apply), electric kettle, and room service (limited hours)</p><p><b>Sleep</b> - Blackout drapes/curtains and bed sheets </p><p><b>Bathroom</b> - Private bathroom, shower, slippers, and free toiletries</p><p><b>Practical</b> - Safe, phone, and iron/ironing board (on request)</p><p><b>Comfort</b> - Air conditioning and daily housekeeping</p><p><b>Accessibility</b> - Lever door handles</p><p>Non-Smoking</p>",
+            "roomAdditionalInfo": {
+                "breakfastInfo": "hotel_detail_room_only",
+                "displayFields": {
+                    "special_check_in_instructions": "Front desk staff will greet guests on arrival at the property.",
+                    "check_in_instructions": "<ul>  <li>Extra-person charges may apply and vary depending on property policy</li><li>Government-issued photo identification and a credit card, debit card, or cash deposit may be required at check-in for incidental charges</li><li>Special requests are subject to availability upon check-in and may incur additional charges; special requests cannot be guaranteed</li><li>The name on the credit card used at check-in to pay for incidentals must be the primary name on the guestroom reservation</li><li>This property accepts credit cards; cash is not accepted</li><li>Long-term renters welcome</li><li>Safety features at this property include a smoke detector</li><li>Please note that cultural norms and guest policies may differ by country and by property; the policies listed are provided by the property</li>  </ul>",
+                    "know_before_you_go": "<ul>  <li>Children stay free when occupying the parent or guardian's room, using existing bedding.</li><li>Only registered guests are allowed in the guestrooms. </li> <li>No pets and no service animals are allowed at this property. </li><li>Contactless check-out is available.</li> </ul>",
+                    "fees_optional": "<ul> <li>Airport shuttle fee: SGD 9 per person (one-way)</li><li>Airport shuttle fee per child: SGD 9 (one-way), (up to 12 years old)</li> <li>Early check-in is available for a fee (subject to availability)</li></ul> <p>The above list may not be comprehensive. Fees and deposits may not include tax and are subject to change. </p>",
+                    "fees_mandatory": null,
+                    "kaligo_service_fee": 123.38,
+                    "hotel_fees": [],
+                    "surcharges": [
+                        {
+                            "type": "TaxAndServiceFee",
+                            "amount": 113.5
+                        }
+                    ]
+                }
+            },
+            "description": "Double Room",
+            "rooms_available": 1,
+            "value_adds": [],
+            "images": [
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/948e6ad9_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/948e6ad9_z.jpg",
+                    "hero_image": true
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/3e02b81d_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/3e02b81d_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/fec06b54_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/fec06b54_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/2acb11a0_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/2acb11a0_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/ea0280aa_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/ea0280aa_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/77cc8d30_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/77cc8d30_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/725e7863_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/725e7863_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/6199a153_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/6199a153_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/31b14f89_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/31b14f89_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/ee172348_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/ee172348_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/b9f82579_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/b9f82579_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/c624ebb2_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/c624ebb2_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/16a19392_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/16a19392_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/09327de5_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/09327de5_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/dacc9ac6_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/dacc9ac6_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/ad0aae25_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/ad0aae25_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/541f00c2_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/541f00c2_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/58161405_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/58161405_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/52c2c3da_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/52c2c3da_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/9fed3523_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/9fed3523_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/ff949863_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/ff949863_z.jpg",
+                    "hero_image": false
+                },
+                {
+                    "url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/9bc62353_b.jpg",
+                    "high_resolution_url": "https://i.travelapi.com/lodging/1000000/90000/83800/83732/9bc62353_z.jpg",
+                    "hero_image": false
+                }
+            ],
+            "amenities": [
+                "Air conditioning",
+                "Electric kettle",
+                "Towels provided",
+                "Bedsheets provided",
+                "Local maps",
+                "Window screens",
+                "Electrical adapters/chargers",
+                "Doorbell/telephone notification",
+                "Lever door handles",
+                "Minibar",
+                "Coffee/tea maker",
+                "Daily housekeeping",
+                "Phone",
+                "Free local calls",
+                "Private bathroom",
+                "Free toiletries",
+                "In-room safe",
+                "Room service (limited hours)",
+                "Iron/ironing board (on request)",
+                "Blackout drapes/curtains",
+                "Slippers",
+                "Shower only",
+                "Hair dryer (on request)",
+                "Cable TV service",
+                "Free WiFi",
+                "LCD TV",
+                "Non-Smoking"
+            ],
+            "price_type": "single",
+            "max_cash_payment": 807.18,
+            "coverted_max_cash_payment": 1059.03,
+            "points": 3353,
+            "bonuses": 0,
+            "bonus_programs": [],
+            "bonus_tiers": [],
+            "lowest_price": 807.18,
+            "price": 1059.03,
+            "converted_price": 1059.03,
+            "lowest_converted_price": 1059.03,
+            "chargeableRate": 807.18,
+            "market_rates": [
+                {
+                    "supplier": "expedia",
+                    "rate": 897.1529166599993
+                }
+            ],
+            "base_rate": 693.68,
+            "base_rate_in_currency": 910.11,
+            "included_taxes_and_fees_total": 113.5,
+            "included_taxes_and_fees_total_in_currency": 148.92,
+            "excluded_taxes_and_fees_currency": "USD",
+            "excluded_taxes_and_fees_total": 0,
+            "excluded_taxes_and_fees_total_in_currency": 0,
+            "included_taxes_and_fees": [
+                {
+                    "id": "tax_and_service_fee",
+                    "amount": 113.5,
+                    "currency": "USD"
+                }
+            ],
+            "included_taxes_and_fees_in_currency": [
+                {
+                    "id": "tax_and_service_fee",
+                    "amount": 148.92,
+                    "currency": "SGD"
+                }
+            ]
+        }
+    ]
+}
