@@ -81,9 +81,9 @@ const RoomGrid = ({ rooms = [], loading = false, onRoomClick, roomHideKeys }) =>
 
               <button
                 onClick={() => onRoomClick?.(room)}
-                className="px-4 py-2 rounded-full bg-gray-100 hover:bg-gray-200 text-sm font-medium"
+                className="px-4 py-2 rounded-full border bg-blue-100 text-black hover:bg-blue-400 transition text-sm font-medium"
               >
-                View Details
+                View Room Details
               </button>
             </div>
           </div>
