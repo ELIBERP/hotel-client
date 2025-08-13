@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import ApiService from '../services/api';
 import Map from '../components/Map';
-import SearchBar from '../components/SearchBar';
 import RoomGrid from '../components/RoomGrid';
 import { LoadScript } from '@react-google-maps/api';
 import Skeleton from '../components/Skeleton';
@@ -12,6 +11,7 @@ import AmenityChip from '../components/AmenityChip';
 import CatHotelImage from '../assets/CatHotelImage.svg';
 import { parseNearby } from '../utils/parseNearby';
 import useOutsideClick from '../hooks/useOutsideClick';
+import destinations from '../assets/destinations.json';
 
 const FALLBACK = CatHotelImage; 
 
@@ -120,6 +120,65 @@ const HotelDetails = () => {
   if (!destination_id || !checkin || !checkout || !guests || !currency || !country_code || !lang) {
     return <div>Error: Missing required query parameters</div>;
   }
+  // Pre-fill destination text from current destination_id
+const selectedDestinationName =
+  destinations.find(d => d.uid === destination_id)?.term || '';
+
+// --- Mini search bar state (same as HotelSearchResults) ---
+const [miniDestInput, setMiniDestInput] = useState(
+  selectedDestinationName !== 'Unknown location' ? selectedDestinationName : ''
+);
+const [miniDestId, setMiniDestId] = useState(destination_id || '');
+const [showDestSuggestions, setShowDestSuggestions] = useState(false);
+
+const [checkinDate, setCheckinDate] = useState(checkin || '');
+const [checkoutDate, setCheckoutDate] = useState(checkout || '');
+
+const [adults, setAdults] = useState(2);
+const [children, setChildren] = useState(0);
+const [roomCount, setRoomCount] = useState(1);
+const [showGuestPicker, setShowGuestPicker] = useState(false);
+
+// Suggestions (same logic as results page)
+const destSuggestions = miniDestInput.length > 1
+  ? destinations
+      .filter(d => d.term && d.term.toLowerCase().includes(miniDestInput.toLowerCase()))
+      .slice(0, 8)
+  : [];
+
+const handleSelectDestination = (d) => {
+  setMiniDestInput(d.term);
+  setMiniDestId(d.uid);
+  setShowDestSuggestions(false);
+};
+
+const adjustAdults   = (delta) => setAdults(a => Math.min(10, Math.max(1, a + delta)));
+const adjustChildren = (delta) => setChildren(c => Math.min(10, Math.max(0, c + delta)));
+const adjustRoomCount = (delta) => setRoomCount(r => Math.min(8, Math.max(1, r + delta)));
+
+const formatGuestsParam = () => {
+  const total = adults + children;
+  if (roomCount <= 1) return String(total);
+  return Array(roomCount).fill(total).join('|');
+};
+
+// Submit: navigate to /hotels (the results page handles fetching/pricing)
+const handleMiniSearch = (e) => {
+  e.preventDefault();
+
+  let destId = miniDestId;
+  if (!destId && destSuggestions.length) destId = destSuggestions[0].uid;
+  if (!destId) return; // require destination
+
+  const qs = new URLSearchParams({
+    destination_id: destId,
+    checkin: checkinDate || '',
+    checkout: checkoutDate || '',
+    guests: formatGuestsParam(),
+  }).toString();
+
+  navigate(`/hotels?${qs}`, { state: { hasSearched: true } });
+};
 
   const extractBedCount = (long_description) => { // to filter by bed count, we extract bed count from long desc
     if (!long_description) return 0;
@@ -431,18 +490,117 @@ const aboutText = htmlToText(aboutOnlyHtml);
       <div ref={pageTopRef} aria-hidden="true" />
       <div>
         <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-6">
-          <div className="w-full border-b border-gray-200 bg-white mb-6">
-            <div className="w-full px-6 sm:px-16 py-4 bg-[#f2f2f4] rounded-xl shadow-sm">
-              <SearchBar
-                placeholder="Paris, France"
-                size="hotelDetailPage"
-                className="w-full max-w-screen-xl mx-auto"
-                onSearch={() => {
-                  // Search functionality placeholder
-                }}
-              />
-            </div>
+          <div className="w-full max-w-screen-xl mx-auto mb-6">
+            <form
+              onSubmit={handleMiniSearch}
+              className="bg-white/90 border border-gray-200 rounded-2xl shadow p-4 md:p-5 flex flex-col gap-4"
+            >
+              <div className="flex flex-col md:flex-row gap-4">
+                {/* Destination */}
+                <div className="relative md:flex-1">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Destination</label>
+                  <input
+                    type="text"
+                    value={miniDestInput}
+                    onChange={(e)=>{ setMiniDestInput(e.target.value); setShowDestSuggestions(true); }}
+                    onFocus={()=> setShowDestSuggestions(true)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    placeholder="Where to?"
+                  />
+                  {showDestSuggestions && destSuggestions.length > 0 && (
+                    <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow max-h-60 overflow-auto">
+                      {destSuggestions.map(d => (
+                        <button
+                          type="button"
+                          key={d.uid}
+                          onClick={()=>handleSelectDestination(d)}
+                          className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                        >
+                          {d.term}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Dates */}
+                <div className="flex gap-4 md:w-[320px]">
+                  <div className="flex-1">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Check-in</label>
+                    <input
+                      type="date"
+                      value={checkinDate}
+                      onChange={e=>setCheckinDate(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Check-out</label>
+                    <input
+                      type="date"
+                      value={checkoutDate}
+                      onChange={e=>setCheckoutDate(e.target.value)}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    />
+                  </div>
+                </div>
+
+                {/* Guests & Rooms */}
+                <div className="relative md:w-56">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Guests & Rooms</label>
+                  <button
+                    type="button"
+                    onClick={()=>setShowGuestPicker(o=>!o)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-left flex justify-between items-center hover:border-gray-400"
+                  >
+                    <span>{adults + children} guests, {roomCount} room{roomCount>1?'s':''}</span>
+                  </button>
+                  {showGuestPicker && (
+                    <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow p-3 text-sm space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span>Adults</span>
+                        <div className="flex items-center gap-2">
+                          <button type="button" onClick={()=>adjustAdults(-1)} className="w-6 h-6 flex items-center justify-center border rounded" aria-label="Decrease adults">-</button>
+                          <span>{adults}</span>
+                          <button type="button" onClick={()=>adjustAdults(1)} className="w-6 h-6 flex items-center justify-center border rounded" aria-label="Increase adults">+</button>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>Children</span>
+                        <div className="flex items-center gap-2">
+                          <button type="button" onClick={()=>adjustChildren(-1)} className="w-6 h-6 flex items-center justify-center border rounded">-</button>
+                          <span>{children}</span>
+                          <button type="button" onClick={()=>adjustChildren(1)} className="w-6 h-6 flex items-center justify-center border rounded">+</button>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>Rooms</span>
+                        <div className="flex items-center gap-2">
+                          <button type="button" onClick={()=>adjustRoomCount(-1)} className="w-6 h-6 flex items-center justify-center border rounded">-</button>
+                          <span>{roomCount}</span>
+                          <button type="button" onClick={()=>adjustRoomCount(1)} className="w-6 h-6 flex items-center justify-center border rounded">+</button>
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <button type="button" onClick={()=>setShowGuestPicker(false)} className="text-xs text-blue-600 font-medium">Done</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Search */}
+                <div className="md:w-32 flex items-end">
+                  <button
+                    type="submit"
+                    className="w-full h-[42px] md:h-[46px] rounded-lg bg-[#47a6ea] hover:bg-[#3690d4] text-white font-semibold text-sm"
+                  >
+                    Search
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
+
           <h1 className="text-2xl font-bold text-[#0e151b] mb-6">{hotel.name}</h1>
           <div className="flex flex-col md:flex-row gap-8 mb-6">
             <div className="rounded-xl w-full md:w-[600px] h-[350px] overflow-hidden">
