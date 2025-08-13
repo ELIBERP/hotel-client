@@ -190,91 +190,88 @@ const HotelDetails = () => {
   };
 
   useEffect(() => {
-    let cancelled = false;
+  let cancelled = false;
 
-    const load = async () => {
-      // Immediately reset UI so old details don't flash
-      setShowDescriptionModal(false);
-      setHotel(null);          // triggers your skeleton + spinner
-      setImages([]);
-      setRooms([]);
-      setLoadingRooms(true);
+  // Reset only hotel-related UI when the hotel id changes
+  setHotel(null);
+  setImages([]);
 
-      // Build query once
-      const query = {
-        destination_id,
-        checkin,
-        checkout,
-        guests,
-        currency,
-        country_code,
-        lang,
-        partner_id: 1,
-      };
+  (async () => {
+    try {
+      const hotelData = await ApiService.getHotelById(id);
+      if (cancelled) return;
 
-      try {
-        // Fetch both in parallel
-        const [hotelData, roomsData] = await Promise.all([
-          ApiService.getHotelById(id),
-          ApiService.getHotelRoomsByID(id, query),
-        ]);
-        if (cancelled) return;
+      // prepare images safely
+      const prefix = hotelData?.image_details?.prefix || '';
+      const suffix = hotelData?.image_details?.suffix || '';
+      const hires  = typeof hotelData?.hires_image_index === 'string' ? hotelData.hires_image_index : '';
+      const indices = hires.split(',').map(s => s.trim()).filter(Boolean);
+      const imageUrls = (prefix && suffix) ? indices.map(i => `${prefix}${i}${suffix}`) : [];
 
-        // Prepare images safely
-        // images (safe)
-        const prefix = hotelData?.image_details?.prefix || '';
-        const suffix = hotelData?.image_details?.suffix || '';
-        const hires  = typeof hotelData?.hires_image_index === 'string' ? hotelData.hires_image_index : '';
-        const indices = hires.split(',').map(s => s.trim()).filter(Boolean);
-        const imageUrls = (prefix && suffix) ? indices.map(i => `${prefix}${i}${suffix}`) : [];
+      setHotel(hotelData);
+      setImages(imageUrls);
+    } catch (e) {
+      if (!cancelled) console.error(e);
+    }
+  })();
 
-        // rooms + annotate with important amenity keys (handles null/undefined/[])
-        const rawRooms = Array.isArray(roomsData?.rooms) ? roomsData.rooms : [];
-        const roomsWithAmenityKeys = rawRooms.map(r => ({
-          ...r,
-          importantAmenityKeys: roomAmenityKeys(r?.amenities), // -> ['wifi','hairDryer',...]
-        }));
+  return () => { cancelled = true; };
+}, [id]);
 
-        // keys common across all rooms (empty Set if none/rooms=[])
-        const commonAcrossRooms = roomsWithAmenityKeys.length
-          ? roomsWithAmenityKeys
-              .map(r => new Set(r.importantAmenityKeys || []))
-              .reduce((acc, set) => {
-                if (!acc) return set;
-                return new Set([...acc].filter(k => set.has(k)));
-              }, null)
-          : new Set();
+useEffect(() => {
+  let cancelled = false;
 
-        // hotel-level booleans you want to show (from /hotels/:id)
-        const a = hotelData?.amenities || {};
-        const hotelBooleanKeys = [
-          a.continentalBreakfast ? 'continentalBreakfast' : null,
-          a.parkingGarage ? 'parkingGarage' : null,
-          a.dryCleaning ? 'dryCleaning' : null,
-        ].filter(Boolean);
+  setLoadingRooms(true);
+  setRooms([]); // clear grid while new rooms load
 
-        // final hotel icon keys: hotel booleans + anything common to all rooms
-        const hotelKeys = Array.from(new Set([...hotelBooleanKeys, ...commonAcrossRooms]));
-   
-        // hydrate UI
-        setHotel(hotelData);
-        setImages(imageUrls);
-        setRooms(roomsWithAmenityKeys);
-        setHotelAmenityKeys(hotelKeys);
-        setRoomHideKeys(new Set(hotelBooleanKeys));
-        console.log('hotelAmenityKeys', hotelAmenityKeys);
-        console.log('roomHideKeys', Array.from(roomHideKeys || []));
-        console.log('roomsWithAmenityKeys', roomsWithAmenityKeys.map(r => r.importantAmenityKeys));
-      } catch (err) {
-        if (!cancelled) console.error(err);
-      } finally {
-        if (!cancelled) setLoadingRooms(false);
-      }
-    };
+  const query = {
+    destination_id,
+    checkin,
+    checkout,
+    guests,
+    currency,
+    country_code,
+    lang,
+    partner_id: 1,
+  };
 
-    load();
-    return () => { cancelled = true; };
-  }, [id, destination_id, checkin, checkout, guests, currency, country_code, lang]);
+  ApiService.getHotelRoomsByID(id, query)
+    .then((roomsData) => {
+      if (cancelled) return;
+
+      const rawRooms = Array.isArray(roomsData?.rooms) ? roomsData.rooms : [];
+      const roomsWithAmenityKeys = rawRooms.map(r => ({
+        ...r,
+        importantAmenityKeys: roomAmenityKeys(r?.amenities),
+      }));
+
+      // compute keys common across all rooms
+      const commonAcrossRooms = roomsWithAmenityKeys.length
+        ? roomsWithAmenityKeys
+            .map(r => new Set(r.importantAmenityKeys || []))
+            .reduce((acc, set) => (!acc ? set : new Set([...acc].filter(k => set.has(k)))), null)
+        : new Set();
+
+      // hotel-level amenity booleans (safe if hotel is not yet loaded)
+      const a = hotel?.amenities || {};
+      const hotelBooleanKeys = [
+        a.continentalBreakfast ? 'continentalBreakfast' : null,
+        a.parkingGarage ? 'parkingGarage' : null,
+        a.dryCleaning ? 'dryCleaning' : null,
+      ].filter(Boolean);
+
+      setRooms(roomsWithAmenityKeys);
+      setHotelAmenityKeys(Array.from(new Set([...(hotelBooleanKeys), ...commonAcrossRooms])));
+      setRoomHideKeys(new Set(hotelBooleanKeys));
+    })
+    .catch((e) => { if (!cancelled) console.error(e); })
+    .finally(() => { if (!cancelled) setLoadingRooms(false); });
+
+  // include `hotel` so hotel-amenity badges recompute once hotel loads
+  // (it won't cause extra room API calls because the body doesn't refetch when only `hotel` changes)
+}, [id, destination_id, checkin, checkout, guests, currency, country_code, lang, hotel]);
+
+
 
   const longHtml = hotel?.long_description || hotel?.description || '';
   const nearby = React.useMemo(() => parseNearby(longHtml), [longHtml]);
