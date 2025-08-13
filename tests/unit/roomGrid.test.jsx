@@ -33,7 +33,7 @@ const makeRooms = () => ([
   }
 ]);
 
-describe('RoomGrid', () => {
+describe('RoomGrid Unit', () => {
   test('shows loading state', () => {
     render(<RoomGrid rooms={[]} loading={true} onRoomClick={vi.fn()} />);
     expect(screen.getByText(/Loading room details/i)).toBeInTheDocument();

@@ -30,7 +30,7 @@ const formatBreakfast = (code) => {
 };
 
 const HotelHeaderSkeleton = () => (
-  <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-6">
+  <div data-testid="hotel-header-skeleton" className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-6">
     <div className="w-full border-b border-gray-200 bg-white mb-6">
       <div className="w-full px-6 sm:px-16 py-4 bg-[#f2f2f4] rounded-xl shadow-sm">
         <Skeleton className="h-10 w-full rounded-lg" />
@@ -58,7 +58,7 @@ const HotelHeaderSkeleton = () => (
 );
 
 const RoomGridSkeleton = ({ count = 6 }) => (
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+  <div div data-testid="room-grid-skeleton" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
     {Array.from({ length: count }).map((_, i) => (
       <div key={i} className="rounded-xl border bg-white p-4 shadow-sm">
         <Skeleton className="w-full h-40 rounded-lg mb-3" />
