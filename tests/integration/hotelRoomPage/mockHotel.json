@@ -1,0 +1,83 @@
+{
+    "id": "dwHs",
+    "imageCount": 124,
+    "latitude": 1.28314,
+    "longitude": 103.84399,
+    "name": "The Inn At Temple Street",
+    "address": "36 Temple Street",
+    "address1": "36 Temple Street",
+    "rating": 2,
+    "trustyou": {
+        "id": "bb3b3dae-41e7-444b-9959-ad541271ec1c",
+        "score": {
+            "overall": 70,
+            "kaligo_overall": 3.5,
+            "solo": 71,
+            "couple": 71,
+            "family": 70,
+            "business": 66
+        }
+    },
+    "categories": {
+        "overall": {
+            "name": "Overall",
+            "score": 70,
+            "popularity": null
+        }
+    },
+    "amenities_ratings": [
+        {
+            "name": "Location",
+            "score": 99
+        },
+        {
+            "name": "Food",
+            "score": 87
+        },
+        {
+            "name": "WiFi",
+            "score": 79
+        },
+        {
+            "name": "Service",
+            "score": 76
+        },
+        {
+            "name": "Room",
+            "score": 39
+        },
+        {
+            "name": "Amenities",
+            "score": 29
+        }
+    ],
+    "description": "Make use of convenient amenities such as complimentary wireless internet access, concierge services, and a hair salon.\n\nTake advantage of the hotel's room service (during limited hours).\n\nFeatured amenities include a business center, express check-in, and express check-out. A roundtrip airport shuttle is provided for a surcharge (available on request).\n\nMake yourself at home in one of the 41 air-conditioned rooms featuring minibars and LCD televisions. Complimentary wireless internet access keeps you connected, and cable programming is available for your entertainment. Private bathrooms with showers feature complimentary toiletries and slippers. Conveniences include safes and coffee/tea makers, as well as phones with free local calls.\n\nDistances are displayed to the nearest 0.1 mile and kilometer. <br /> <p>Chinatown Heritage Center - 0.1 km / 0.1 mi <br /> Buddha Tooth Relic Temple and Museum - 0.3 km / 0.2 mi <br /> Chinatown Point - 0.4 km / 0.3 mi <br /> Maxwell Food Centre - 0.5 km / 0.3 mi <br /> Clarke Quay Central - 0.8 km / 0.5 mi <br /> Clarke Quay Mall - 0.8 km / 0.5 mi <br /> Raffles Place - 1 km / 0.6 mi <br /> Boat Quay - 1.1 km / 0.7 mi <br /> Robertson Quay - 1.2 km / 0.8 mi <br /> Fort Canning Park - 1.3 km / 0.8 mi <br /> Singapore General Hospital - 1.3 km / 0.8 mi <br /> Central Fire Station - 1.4 km / 0.9 mi <br /> Former City Hall - 1.4 km / 0.9 mi <br /> Asian Civilisations Museum - 1.4 km / 0.9 mi <br /> National Gallery Singapore - 1.5 km / 0.9 mi <br /> </p><p>The nearest airports are:<br />Seletar Airport (XSP) - 19.1 km / 11.8 mi<br /> Singapore Changi Airport (SIN) - 22.9 km / 14.2 mi<br /> Senai International Airport (JHB) - 67.8 km / 42.1 mi<br /> </p><p>The preferred airport for The Inn At Temple Street is Singapore Changi Airport (SIN). </p>\n\nWith a stay at The Inn At Temple Street in Singapore (Downtown Singapore), you'll be within a 5-minute drive of Marina Bay Sands Skypark and Marina Bay Sands Casino.  This hotel is 0.6 mi (1 km) from Raffles Place and 2.9 mi (4.7 km) from Orchard Road.\n\nNear Raffles Place",
+    "amenities": {
+        "airConditioning": true,
+        "businessCenter": true,
+        "clothingIron": true,
+        "dryCleaning": true,
+        "hairDryer": true,
+        "miniBarInRoom": true,
+        "roomService": true,
+        "safe": true,
+        "tVInRoom": true
+    },
+    "original_metadata": {
+        "name": null,
+        "city": "Singapore",
+        "state": null,
+        "country": "SG"
+    },
+    "image_details": {
+        "suffix": ".jpg",
+        "count": 124,
+        "prefix": "https://d2ey9sqrvkqdfs.cloudfront.net/dwHs/"
+    },
+    "hires_image_index": "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70",
+    "number_of_images": 56,
+    "default_image_index": 1,
+    "imgix_url": "https://kaligo-web-expedia.imgix.net",
+    "cloudflare_image_url": "https://www.kaligo-staging.xyz/images/new",
+    "checkin_time": "3:00 PM"
+}
