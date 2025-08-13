@@ -162,7 +162,7 @@ const formatGuestsParam = () => {
   return Array(roomCount).fill(total).join('|');
 };
 
-// Submit: navigate to /hotels (the results page handles fetching/pricing)
+// Submit: navigate to /search ()
 const handleMiniSearch = (e) => {
   e.preventDefault();
 
@@ -171,13 +171,18 @@ const handleMiniSearch = (e) => {
   if (!destId) return; // require destination
 
   const qs = new URLSearchParams({
-    destination_id: destId,
-    checkin: checkinDate || '',
-    checkout: checkoutDate || '',
-    guests: formatGuestsParam(),
-  }).toString();
+  destination_id: destId,
+  checkin: checkinDate,
+  checkout: checkoutDate,
+  guests: formatGuestsParam(),
+  lang: 'en_US',
+  currency: 'SGD',
+  partner_id: 1089,
+  landing_page: 'wl-acme-earn',
+  product_type: 'earn'
+}).toString();
 
-  navigate(`/hotels?${qs}`, { state: { hasSearched: true } });
+  navigate(`/search?${qs}`, { state: { hasSearched: true } });
 };
 
   const extractBedCount = (long_description) => { // to filter by bed count, we extract bed count from long desc
