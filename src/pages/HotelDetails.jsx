@@ -87,8 +87,7 @@ const HotelDetails = () => {
   const nearbyHotels = location.state?.nearbyHotels || [];
   const mapModalRef = useRef(null);
   const descModalRef = useRef(null);
-  const [hotel, setHotel] = useState(null);
-  const [images, setImages] = useState([]);
+  const [hotel, setHotel] = useState(null);  
   const roomModalRef = useRef(null);
   const [selectedRoom, setSelectedRoom] = useState(null); // for the room modal
   const [rooms, setRooms] = useState([]);
@@ -237,7 +236,6 @@ const preloadFirstWorking = (urls, timeoutMs = 8000) =>
 
   // Clear hotel header + images so header skeleton shows
   setHotel(null);
-  setImages([]);
 
   // Clear rooms so the grid skeleton shows
   setRooms([]);
@@ -300,10 +298,7 @@ const preloadFirstWorking = (urls, timeoutMs = 8000) =>
 
         // build candidates
         const imageUrls = buildImageUrls(hotelData);
-
         setHotel(hotelData);
-        setImages(imageUrls);
-
         // header image
         const primary = await preloadFirstWorking(imageUrls);
         if (cancelled) return;
