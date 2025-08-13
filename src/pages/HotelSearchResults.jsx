@@ -236,15 +236,10 @@ const HotelSearchResults = () => {
   const hotelsWithPrice = hotels
     .map(hotel => {
       const priceObj = prices.find(p => p.id === hotel.id);
-      if (!priceObj) {
-        // Show hotel even without price data, with loading state
-        const nights = getNights(committedCheckin || checkin, committedCheckout || checkout);
-        return { ...hotel, price: null, perNight: null, searchRank: 0, priceLoading: true };
-      }
-      if (!priceObj.price) return null;
+      if (!priceObj || priceObj.price == null) return null; // exclude hotels without a price
       const nights = getNights(committedCheckin || checkin, committedCheckout || checkout);
       const perNight = nights > 0 ? priceObj.price / nights : priceObj.price;
-      return { ...hotel, price: priceObj.price, perNight, searchRank: priceObj.searchRank, priceLoading: false };
+      return { ...hotel, price: priceObj.price, perNight, searchRank: priceObj.searchRank || 0 };
     })
     .filter(Boolean);
 
@@ -291,6 +286,7 @@ const HotelSearchResults = () => {
     }
   };
   const slicedHotels = paginatedHotels.slice(0, 6);
+  const hasPricedHotels = hotelsWithPrice.length > 0;
 
   // Render hotel search results UI
   return (
@@ -481,7 +477,7 @@ const HotelSearchResults = () => {
             </select>
           </div>
           {/* Loading and empty states */}
-          {(loading || isPollingRef.current) ? (
+          {(!hasPricedHotels && (loading || isPollingRef.current)) ? (
             <div className="flex flex-col gap-8">
               {/* Skeleton loading cards */}
               {Array.from({ length: 6 }).map((_, index) => (
@@ -516,11 +512,12 @@ const HotelSearchResults = () => {
                 </div>
               ))}
             </div>
-          ) : hotels.length === 0 ? (
-            <p>No hotels found for this destination.</p>
+          ) : !hasPricedHotels ? (
+            <p className="text-sm text-gray-600">No available hotels with pricing for the selected criteria.</p>
           ) : (
             <>
-              {/* Hotel cards */}
+              {/* If no priced hotels after polling, show message */}
+              {/* Hotel cards (priced only) */}
               <div className="flex flex-col gap-8">
                 {paginatedHotels.map((hotel, index) => {
                   const nearbyHotels = slicedHotels.filter(h => h.id !== hotel.id);
@@ -532,9 +529,7 @@ const HotelSearchResults = () => {
                   let priceText = '';
                   let perNight = null;
                   
-                  if (hotel.priceLoading) {
-                    priceText = 'Loading price...';
-                  } else if (priceObj && priceObj.price) {
+                  if (priceObj && priceObj.price) {
                     priceText = `Total $${priceObj.price} for ${nights} night${nights > 1 ? 's' : ''}`;
                     perNight = nights > 0 ? (priceObj.price / nights) : priceObj.price;
                   } else if (hotel.price) {
@@ -635,15 +630,7 @@ const HotelSearchResults = () => {
                           </div>
                         </div>
                         <div className="flex flex-col items-end justify-end text-right min-w-[170px] pt-8">
-                          {hotel.priceLoading ? (
-                            <>
-                              <div className="flex items-center gap-2 mb-2">
-                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent"></div>
-                                <span className="text-sm text-gray-500">Loading price...</span>
-                              </div>
-                              <div className="h-6 bg-gray-200 rounded w-24 mb-4 animate-pulse"></div>
-                            </>
-                          ) : perNight !== null ? (
+                          {perNight !== null ? (
                             <>
                               <div className="text-black font-bold text-3xl leading-tight">
                                 ${perNight.toFixed(0)} <span className="text-base font-medium">/night</span>
