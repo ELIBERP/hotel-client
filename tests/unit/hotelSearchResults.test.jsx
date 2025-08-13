@@ -131,8 +131,8 @@ describe('HotelSearchResults — unit tests', () => {
     expect(screen.queryByRole('link', { name: /sunset resort/i })).not.toBeInTheDocument();
   });
 
-  test('3) Ignore loading prices in filter', async () => {
-    // make H2 "loading" by omitting it from prices
+  test('3) Unpriced hotels are not rendered', async () => {
+    // Omit H2 from prices → only H1 and H3 have prices
     ApiService.getHotels.mockReset();
     ApiService.getHotelsPrice.mockReset();
     setHotelsResolve(HOTELS);
@@ -144,13 +144,11 @@ describe('HotelSearchResults — unit tests', () => {
     renderComponent();
     await screen.findByRole('link', { name: /orchard inn/i });
 
-    const min = screen.getByPlaceholderText(/min/i);
-    const max = screen.getByPlaceholderText(/max/i);
-    fireEvent.change(min, { target: { value: '100' } });
-    fireEvent.change(max, { target: { value: '150' } });
-
-    // H2 stays visible (loading price shouldn't be filtered)
-    expect(screen.getByRole('link', { name: /sunset resort/i })).toBeInTheDocument();
+    // H2 (sunset) should NOT appear because it has no price
+    expect(screen.queryByRole('link', { name: /sunset resort/i })).not.toBeInTheDocument();
+    // H1 & H3 should appear
+    expect(screen.getByRole('link', { name: /orchard inn/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /bay hotel/i })).toBeInTheDocument();
   });
 
   test('4) Star bucket multi select', async () => {
@@ -257,18 +255,21 @@ describe('HotelSearchResults — unit tests', () => {
     expect(img.getAttribute('src')).toMatch(/\/hotel\.svg$/i);
   });
 
-  test('12) price text fallback', async () => {
-    // make H1 & H2 absent in prices so they show "Price unavailable"
+  test('12) only priced hotels render; no "Price unavailable" string shown', async () => {
+    // Only H3 priced → list should only contain H3
     ApiService.getHotels.mockReset();
     ApiService.getHotelsPrice.mockReset();
     setHotelsResolve(HOTELS);
     setPricesResolve([{ id: 'H3', price: 600, searchRank: 20 }]);
 
     renderComponent();
-    await screen.findByRole('link', { name: /orchard inn/i });
+    await screen.findByRole('link', { name: /bay hotel/i });
 
-    const sunsetCard = screen.getByRole('link', { name: /sunset resort/i });
-    expect(within(sunsetCard).getByText(/loading price/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /bay hotel/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /orchard inn/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /sunset resort/i })).not.toBeInTheDocument();
+    // Your component no longer renders a visible fallback string for unpriced items
+    expect(screen.queryByText(/price unavailable/i)).not.toBeInTheDocument();
   });
 
   test('13) card skeleton while polling (loading state)', async () => {
