@@ -51,7 +51,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
 });
 
 describe('HotelDetails Integration', () => {
-  // ====== 1. Hotel Name Display Test ========== //
+  // ====== 10. Hotel Name Display Test ========== //
   it('should display the hotel name after API data is fetched', async () => {
     // Render the component within a BrowserRouter
     render(
@@ -76,7 +76,7 @@ describe('HotelDetails Integration', () => {
     expect(ApiService.getHotelRoomsByID).toHaveBeenCalled();
   });
 
-  // ====== 2. Display Skeleton ========== //
+  // ====== 11. Display Skeleton ========== //
   it('should display skeleton loaders while fetching data', () => {
     render(
       <BrowserRouter>
@@ -91,7 +91,7 @@ describe('HotelDetails Integration', () => {
     expect(roomGridSkeleton).toBeInTheDocument();
   });
 
-  // ====== 3. Correct API service called ========== //
+  // ====== 12. Correct API service called ========== //
   it('should call the API services with correct parameters on initial render', async () => {
     // Render the component
     render(
@@ -117,7 +117,7 @@ describe('HotelDetails Integration', () => {
     });
   });
 
-  // ====== 4. Main Image and Gallery Images Test ========== //
+  // ====== 13. Main Image and Gallery Images Test ========== //
   it('should display the main hotel image and gallery images', async () => {
     render(
       <BrowserRouter>
@@ -141,7 +141,7 @@ describe('HotelDetails Integration', () => {
     // You can further assert that the src of some gallery images matches your mock
   });
 
-  // ====== 5. Hotel Amenities Test ========== //
+  // ====== 14. Hotel Amenities Test ========== //
   it('should display hotel amenities', async () => {
     render(
       <BrowserRouter>
@@ -160,7 +160,7 @@ describe('HotelDetails Integration', () => {
     });
   });
 
-  // ====== 6. Room Grid and Filter Buttons Test ========== //
+  // ====== 15. Room Grid and Filter Buttons Test ========== //
   it('should display room grid and filter buttons when rooms are available', async () => {
     render(
       <BrowserRouter>
@@ -186,7 +186,7 @@ describe('HotelDetails Integration', () => {
     });
   });
   
-  // ====== 7. Invalid Hotel ID ========== //
+  // ====== 16. Invalid Hotel ID ========== //
   it('should not display hotel name when API call fails due to invalid ID', async () => {
     // Override the mock to simulate an invalid ID for this test.
     vi.doMock('react-router-dom', async (importOriginal) => {
