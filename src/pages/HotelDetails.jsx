@@ -75,6 +75,7 @@ const RoomGridSkeleton = ({ count = 6 }) => (
 
 
 const HotelDetails = () => {
+  
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -91,6 +92,7 @@ const HotelDetails = () => {
   const [loadingRooms, setLoadingRooms] = useState(true);
   const [showDescriptionModal, setShowDescriptionModal] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const pageTopRef = useRef(null);
   const [showMapModal, setShowMapModal] = useState(false); // for Google map to show in popup
   const [hotelDetails, setHotelDetails] = useState({
     name: '',
@@ -146,10 +148,32 @@ const HotelDetails = () => {
   };
 }, [showDescriptionModal]);
 
-  // for page refresh when choosing another hotel under recommendation
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [id]);
+    pageTopRef.current?.scrollIntoView({ behavior: 'auto', block: 'start' });
+
+    // Fallbacks in case a browser ignores scrollIntoView for nested containers
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [location.key]);
+
+  useEffect(() => {
+  // Close any open modals
+  setShowDescriptionModal(false);
+  setSelectedRoom(null);
+
+  // Clear hotel header + images so header skeleton shows
+  setHotel(null);
+  setImages([]);
+
+  // Clear rooms so the grid skeleton shows
+  setRooms([]);
+  setLoadingRooms(true);
+
+  // Clear amenity-derived UI so old chips don't flash
+  setHotelAmenityKeys([]);
+  setRoomHideKeys(new Set());
+}, [id, location.key]);
+
 
 
   // Update hotelDetails object based on the first room in rooms
@@ -192,9 +216,6 @@ const HotelDetails = () => {
   useEffect(() => {
   let cancelled = false;
 
-  // Reset only hotel-related UI when the hotel id changes
-  setHotel(null);
-  setImages([]);
 
   (async () => {
     try {
@@ -222,7 +243,7 @@ useEffect(() => {
   let cancelled = false;
 
   setLoadingRooms(true);
-  setRooms([]); // clear grid while new rooms load
+  setRooms([]);
 
   const query = {
     destination_id,
@@ -245,31 +266,41 @@ useEffect(() => {
         importantAmenityKeys: roomAmenityKeys(r?.amenities),
       }));
 
-      // compute keys common across all rooms
-      const commonAcrossRooms = roomsWithAmenityKeys.length
-        ? roomsWithAmenityKeys
-            .map(r => new Set(r.importantAmenityKeys || []))
-            .reduce((acc, set) => (!acc ? set : new Set([...acc].filter(k => set.has(k)))), null)
-        : new Set();
-
-      // hotel-level amenity booleans (safe if hotel is not yet loaded)
-      const a = hotel?.amenities || {};
-      const hotelBooleanKeys = [
-        a.continentalBreakfast ? 'continentalBreakfast' : null,
-        a.parkingGarage ? 'parkingGarage' : null,
-        a.dryCleaning ? 'dryCleaning' : null,
-      ].filter(Boolean);
-
       setRooms(roomsWithAmenityKeys);
-      setHotelAmenityKeys(Array.from(new Set([...(hotelBooleanKeys), ...commonAcrossRooms])));
-      setRoomHideKeys(new Set(hotelBooleanKeys));
+      
     })
     .catch((e) => { if (!cancelled) console.error(e); })
     .finally(() => { if (!cancelled) setLoadingRooms(false); });
 
-  // include `hotel` so hotel-amenity badges recompute once hotel loads
-  // (it won't cause extra room API calls because the body doesn't refetch when only `hotel` changes)
-}, [id, destination_id, checkin, checkout, guests, currency, country_code, lang, hotel]);
+  return () => { cancelled = true; };
+}, [id, destination_id, checkin, checkout, guests, currency, country_code, lang]);
+
+  useEffect(() => {
+    // If hotel not ready yet, clear chips to avoid stale display
+    if (!hotel) {
+      setHotelAmenityKeys([]);
+      setRoomHideKeys(new Set());
+      return;
+    }
+
+    // Keys common across all rooms
+    const commonAcrossRooms = rooms.length
+      ? rooms
+          .map(r => new Set(r.importantAmenityKeys || []))
+          .reduce((acc, set) => (!acc ? set : new Set([...acc].filter(k => set.has(k)))), null)
+      : new Set();
+
+    // Simple hotel-level booleans
+    const a = hotel?.amenities || {};
+    const hotelBooleanKeys = [
+      a.continentalBreakfast ? 'continentalBreakfast' : null,
+      a.parkingGarage ? 'parkingGarage' : null,
+      a.dryCleaning ? 'dryCleaning' : null,
+    ].filter(Boolean);
+
+    setHotelAmenityKeys(Array.from(new Set([...(hotelBooleanKeys), ...commonAcrossRooms])));
+    setRoomHideKeys(new Set(hotelBooleanKeys));
+  }, [hotel, rooms]);
 
 
 
@@ -317,6 +348,7 @@ const mainImageUrl = firstImage || FALLBACK;
   
   return (
     <div>
+      <div ref={pageTopRef} aria-hidden="true" />
       <div>
         <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-6">
           <div className="w-full border-b border-gray-200 bg-white mb-6">
@@ -492,11 +524,11 @@ const mainImageUrl = firstImage || FALLBACK;
             <RoomGridSkeleton count={6} />
           ) : (
             <RoomGrid
+              key={`${id}-${checkin}-${checkout}-${guests}-${currency}-${lang}`}
               rooms={filteredRooms}
               loading={loadingRooms}
-              onRoomClick={(room) => setSelectedRoom(room)} 
+              onRoomClick={(room) => setSelectedRoom(room)}
               roomHideKeys={roomHideKeys}
-              
             />
           )}
         </div>
@@ -632,17 +664,27 @@ const mainImageUrl = firstImage || FALLBACK;
                         state: { nearbyHotels },
                       })
                     }
-                    className="cursor-pointer flex flex-col gap-2 min-w-[220px] rounded-lg shadow-md bg-white hover:shadow-lg transition-shadow duration-200"
+                    className="cursor-pointer flex-none flex flex-col gap-2 w-[240px] rounded-xl shadow-md bg-white hover:shadow-lg transition-shadow duration-200"
                   >
                     <div
-                      className="w-full aspect-video bg-cover bg-center rounded-t-lg"
+                      className="w-full aspect-[16/9] bg-cover bg-center rounded-t-xl"
                       style={{ backgroundImage: bg }}
                     />
                     <div className="p-4">
-                      <p className="text-[#111518] font-medium text-base hover:underline">
+                      <p
+                        className="text-[#111518] font-medium text-base hover:underline break-words"
+                        style={{
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          minHeight: '44px', // ~2 lines at base size
+                          lineHeight: '1.25',
+                        }}
+                      >
                         {hotel.name}
                       </p>
-                      <p className="text-[#637888] text-sm">
+                                            <p className="text-[#637888] text-sm">
                         From ${hotel.price || '—'} · Rating: {hotel.rating || 'N/A'}
                       </p>
                     </div>
