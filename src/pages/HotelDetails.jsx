@@ -79,6 +79,9 @@ const HotelDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const [primaryImage, setPrimaryImage] = useState(null);
+  const [galleryImages, setGalleryImages] = useState([]); 
+  const [primaryResolved, setPrimaryResolved] = useState(false);
   const [hotelAmenityKeys, setHotelAmenityKeys] = useState([]);   // for icons under the description
   const [roomHideKeys, setRoomHideKeys] = useState(new Set());    // common across all rooms
   const nearbyHotels = location.state?.nearbyHotels || [];
@@ -128,6 +131,77 @@ const HotelDetails = () => {
     return match ? parseInt(match[1], 10) : 0;
   };
 
+  // Normalize protocol-less prefixes like "//..." to "https://..."
+const normalizePrefix = (p) => (p?.startsWith('//') ? `https:${p}` : (p || ''));
+
+// Build candidate image URLs from API data
+const buildImageUrls = (data, limit = 12) => {
+  const prefixRaw = data?.image_details?.prefix || '';
+  const suffix = data?.image_details?.suffix || '';
+  const prefix = normalizePrefix(prefixRaw);
+
+  // Case 1: use hires_image_index if present
+  const hires = (data?.hires_image_index || '').trim();
+  if (hires) {
+    const idxs = hires
+      .split(',')
+      .map(s => s.trim())
+      .filter(s => /^\d+$/.test(s))
+      .slice(0, limit);
+    return (prefix && suffix) ? idxs.map(i => `${prefix}${i}${suffix}`) : [];
+  }
+
+  // Case 2: fall back to default_image_index + number_of_images
+  const total = Number(data?.number_of_images) || 0;
+  const def = Math.max(1, Number(data?.default_image_index) || 1);
+
+  if (!prefix || !suffix || total <= 0) return [];
+
+  // Order: def..total, then 1..def-1 (so default shows first)
+  const idxs = [];
+  for (let i = def; i <= total && idxs.length < limit; i++) idxs.push(i);
+  for (let i = 1; i < def && idxs.length < limit; i++) idxs.push(i);
+
+  return idxs.map(i => `${prefix}${i}${suffix}`);
+};
+
+// Resolve with the first URL that actually loads
+const preloadFirstWorking = (urls, timeoutMs = 8000) =>
+  new Promise((resolve) => {
+    if (!urls?.length) return resolve(null);
+    let i = 0;
+    const tryNext = () => {
+      if (i >= urls.length) return resolve(null);
+      const url = urls[i++];
+      const img = new Image();
+      const timer = setTimeout(() => {
+        img.onload = img.onerror = null;
+        tryNext();
+      }, timeoutMs);
+      img.onload = () => { clearTimeout(timer); resolve(url); };
+      img.onerror = () => { clearTimeout(timer); tryNext(); };
+      img.src = url;
+    };
+    tryNext();
+  });
+
+  const probeImages = async (urls, limit = 10, timeoutMs = 3500) => {
+    const slice = (urls || []).slice(0, limit);
+    const checks = slice.map((url, idx) =>
+      new Promise((resolve) => {
+        const img = new Image();
+        const timer = setTimeout(() => {
+          img.onload = img.onerror = null;
+          resolve({ url, ok: false, idx });
+        }, timeoutMs);
+        img.onload = () => { clearTimeout(timer); resolve({ url, ok: true, idx }); };
+        img.onerror = () => { clearTimeout(timer); resolve({ url, ok: false, idx }); };
+        img.src = url;
+      })
+    );
+    const results = await Promise.all(checks);
+    return results.filter(r => r.ok).sort((a,b) => a.idx - b.idx).map(r => r.url);
+  };
   const filteredRooms = rooms.filter((room) => {
     const bedCount = extractBedCount(room.long_description);
     if (selectedFilter === 'all') return true;
@@ -172,6 +246,9 @@ const HotelDetails = () => {
   // Clear amenity-derived UI so old chips don't flash
   setHotelAmenityKeys([]);
   setRoomHideKeys(new Set());
+  setPrimaryImage(null);   
+  setGalleryImages([]); 
+  setPrimaryResolved(false);  
 }, [id, location.key]);
 
 
@@ -214,30 +291,40 @@ const HotelDetails = () => {
   };
 
   useEffect(() => {
-  let cancelled = false;
+    let cancelled = false;
 
+    (async () => {
+      try {
+        const hotelData = await ApiService.getHotelById(id);
+        if (cancelled) return;
 
-  (async () => {
-    try {
-      const hotelData = await ApiService.getHotelById(id);
-      if (cancelled) return;
+        // build candidates
+        const imageUrls = buildImageUrls(hotelData);
 
-      // prepare images safely
-      const prefix = hotelData?.image_details?.prefix || '';
-      const suffix = hotelData?.image_details?.suffix || '';
-      const hires  = typeof hotelData?.hires_image_index === 'string' ? hotelData.hires_image_index : '';
-      const indices = hires.split(',').map(s => s.trim()).filter(Boolean);
-      const imageUrls = (prefix && suffix) ? indices.map(i => `${prefix}${i}${suffix}`) : [];
+        setHotel(hotelData);
+        setImages(imageUrls);
 
-      setHotel(hotelData);
-      setImages(imageUrls);
-    } catch (e) {
-      if (!cancelled) console.error(e);
-    }
-  })();
+        // header image
+        const primary = await preloadFirstWorking(imageUrls);
+        if (cancelled) return;
 
-  return () => { cancelled = true; };
-}, [id]);
+        setPrimaryImage(primary);
+        setPrimaryResolved(true); // ✅ we’re done deciding the header image
+
+        // gallery = verified working images beyond the header
+        const rest = (imageUrls || []).filter(u => u && u !== primary);
+        const verified = await probeImages(rest, 10, 3500);
+        if (!cancelled) setGalleryImages(verified);
+      } catch (e) {
+        if (!cancelled) {
+          console.error(e);
+          setPrimaryResolved(true); // ✅ fail-safe: stop skeleton, show fallback
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [id]);
 
 useEffect(() => {
   let cancelled = false;
@@ -319,9 +406,7 @@ const htmlToText = (html) => {
 const aboutOnlyHtml = longHtml.split(/Distances are displayed/i)[0] || longHtml;
 const aboutText = htmlToText(aboutOnlyHtml);
 
-// Main image w/ fallback
-const firstImage = Array.isArray(images) && images[0] ? images[0] : null;
-const mainImageUrl = firstImage || FALLBACK;
+
 
   if (!hotel) {
     return (
@@ -366,16 +451,29 @@ const mainImageUrl = firstImage || FALLBACK;
           <h1 className="text-2xl font-bold text-[#0e151b] mb-6">{hotel.name}</h1>
           <div className="flex flex-col md:flex-row gap-8 mb-6">
             <div className="rounded-xl w-full md:w-[600px] h-[350px] overflow-hidden">
-              <img
-                src={mainImageUrl}
-                alt="Main Hotel View"
-                className="w-full h-full object-cover"
-                loading="lazy"
-                onError={(e) => {
-                  e.currentTarget.onerror = null; // prevent loop
-                  e.currentTarget.src = FALLBACK;
-                }}
-              />
+              {primaryImage ? (
+                <img
+                  src={primaryImage}
+                  alt="Main Hotel View"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = FALLBACK;
+                  }}
+                />
+              ) : primaryResolved ? (
+                <img
+                  src={FALLBACK}
+                  alt="Main Hotel View"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-full h-full">
+                  <Skeleton className="w-full h-full rounded-xl" />
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col justify-start md:w-1/2">
@@ -423,19 +521,19 @@ const mainImageUrl = firstImage || FALLBACK;
             </div>
           </div>
 
-          {images.length > 0 && (
+          {galleryImages.length > 0 && (
             <div className="flex gap-4 overflow-x-auto py-4">
-              {images.map((url, idx) => (
+              {galleryImages.map((url, idx) => (
                 <img
                   key={idx}
-                  src={url || CatHotelImage}
-                  onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src = CatHotelImage;
-                  }}
-                  alt={`Hotel image ${idx + 1}`}
+                  src={url}
+                  alt={`Hotel image ${idx + 2}`} // +2 because header is #1
                   className="w-48 h-32 object-cover rounded-xl flex-shrink-0"
                   loading="lazy"
+                  onError={(e) => {
+                    // If a verified image somehow fails later, hide that thumb
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
               ))}
             </div>
@@ -646,15 +744,25 @@ const mainImageUrl = firstImage || FALLBACK;
               .filter(h => String(h.id) !== String(id))
               .slice(0, 3)
               .map(hotel => {
-                const firstIndex = hotel.hires_image_index?.split(',')[0]?.trim();
-                const primary = (hotel.image_details?.prefix && firstIndex)
-                  ? `${hotel.image_details.prefix}${firstIndex}${hotel.image_details.suffix}`
-                  : null;
+                const prefixRaw = hotel.image_details?.prefix || '';
+                const suffix = hotel.image_details?.suffix || '';
+                const prefix = prefixRaw.startsWith('//') ? `https:${prefixRaw}` : prefixRaw;
 
-                // Stack backgrounds: primary first, fallback second
-                const bg = primary
-                  ? `url("${primary}"), url("${CatHotelImage}")`
-                  : `url("${CatHotelImage}")`;
+                let idxs = (hotel.hires_image_index || '')
+                  .split(',')
+                  .map(s => s.trim())
+                  .filter(s => /^\d+$/.test(s));
+
+                if (idxs.length === 0) {
+                  const total = Number(hotel.number_of_images) || 0;
+                  const def = Math.max(1, Number(hotel.default_image_index) || 1);
+                  // Take up to 3 candidates around the default
+                  for (let i = def; i <= total && idxs.length < 3; i++) idxs.push(String(i));
+                  for (let i = 1; i < def && idxs.length < 3; i++) idxs.push(String(i));
+                }
+
+                const candidates = (prefix && suffix) ? idxs.map(i => `${prefix}${i}${suffix}`) : [];
+                const bg = [...candidates, CatHotelImage].map(u => `url("${u}")`).join(', ');
 
                 return (
                   <div
