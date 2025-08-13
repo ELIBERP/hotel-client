@@ -269,11 +269,17 @@ const HotelSearchResults = () => {
   });
   // Sort by searchRank descending (default)
   filteredHotels = filteredHotels.sort((a, b) => b.searchRank - a.searchRank);
-  // Sort by price if selected - only show hotels with loaded prices
+  // Sort by price if selected - only show hotels with loaded prices/ sort by guest rating
   if (priceSort === 'asc') {
     filteredHotels = filteredHotels.filter(hotel => !hotel.priceLoading && hotel.price !== null).sort((a, b) => a.price - b.price);
   } else if (priceSort === 'desc') {
     filteredHotels = filteredHotels.filter(hotel => !hotel.priceLoading && hotel.price !== null).sort((a, b) => b.price - a.price);
+  } else if (priceSort === 'guest') {
+    const score = (h) => {
+      const s = h?.trustyou?.score?.overall;
+      return typeof s === 'number' ? s : -1; // unrated to bottom
+    };
+    filteredHotels = filteredHotels.sort((a, b) => score(b) - score(a));
   }
   // Pagination: slice hotels for current page
   const totalPages = Math.ceil(filteredHotels.length / HOTELS_PER_PAGE);
@@ -472,6 +478,7 @@ const HotelSearchResults = () => {
               className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white shadow-sm hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-200 w-56"
             >
               <option value="relevance">Relevance</option>
+              <option value="guest">Guest Rating</option>
               <option value="asc">Price: Low to High</option>
               <option value="desc">Price: High to Low</option>
             </select>
