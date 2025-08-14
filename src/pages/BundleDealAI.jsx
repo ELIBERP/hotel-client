@@ -1,4 +1,22 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+
+import useOutsideClick from '../hooks/useOutsideClick';
+import ViaHotelTaipeiStation from '../assets/BundleDealAI/ViaHotelTaiPei.webp';
+import MorwingHotelFairyTale from '../assets/BundleDealAI/MorwingHotelFairyTale.webp';
+
+const formatBreakfast = (code) => {
+  switch (code) {
+    case 'hotel_detail_room_only':
+      return 'Not included';
+    case 'hotel_detail_breakfast_included':
+      return 'Included';
+    case 'hotel_detail_breakfast_available':
+    case 'hotel_detail_breakfast_optional':
+      return 'Available (extra charge)';
+    default:
+      return 'Not included';
+  }
+};
 
 // Helper components for icons
 const SearchIcon = () => (
@@ -37,11 +55,43 @@ const mockBundles = [
   {
     id: 1,
     hotel: {
-      name: 'The Grand Hotel, Taipei',
-      price: 250,
+      name: 'Via Hotel Taipei Station',
+      price: 1856.28,
       rating: 5,
-      image: 'https://placehold.co/600x400/a2a8d3/ffffff?text=Grand+Hotel',
-      description: 'Experience luxury in the heart of Taipei, with stunning views and world-class amenities.'
+      image: ViaHotelTaipeiStation,
+      description: 'Experience luxury in the heart of Taipei, with stunning views and world-class amenities.',
+      rooms: [{
+        key: "973ba112-4b09-5ae2-8ba4-d0218b0b5096",
+        roomDescription: "Standard Double Room, 1 Double Bed, No Windows",
+        roomNormalizedDescription: "Standard Double Room, 1 Double Bed, No Windows",
+        type: "201255428",
+        free_cancellation: true,
+        long_description: "<p><strong>1 Double Bed</strong></p><p>183 sq feet </p><br/><p><b>Internet</b> - Free WiFi </p><p><b>Entertainment</b> - 42-inch LED TV with cable channels</p><p><b>Food & Drink</b> - Refrigerator, electric kettle, and free bottled water</p><p><b>Sleep</b> - Bed sheets </p><p><b>Bathroom</b> - Private bathroom, shower, slippers, and a hair dryer</p><p><b>Practical</b> - Safe, phone, and iron/ironing board (on request); free cribs/infant beds available on request</p><p><b>Comfort</b> - Air conditioning and daily housekeeping</p><p><b>Need to Know</b> - No windows</p><p>Non-Smoking</p>",
+        roomAdditionalInfo: {
+          breakfastInfo: "hotel_detail_room_only",
+          displayFields: {
+            special_check_in_instructions: "This property offers transfers from the airport (surcharges may apply)...",
+            check_in_instructions: "<ul><li>Extra-person charges may apply and vary depending on property policy</li>...</ul>",
+            know_before_you_go: "<ul><li>One child 12 years old or younger stays free...</li></ul>",
+            fees_optional: "<ul><li>Airport shuttle fee: TWD 1200 per vehicle (one way)</li></ul>...",
+          }
+        },
+        images: [
+          {
+            url: "https://i.travelapi.com/lodging/13000000/12290000/12283600/12283533/a7579d98_b.jpg",
+            high_resolution_url: "https://i.travelapi.com/lodging/13000000/12290000/12283600/12283533/a7579d98_z.jpg",
+            hero_image: true
+          }
+        ],
+        amenities: [
+          "Air conditioning",
+          "Electric kettle",
+          "Free WiFi",
+          "TV",
+          "Private bathroom"
+        ],
+        converted_price: 266.99
+      }]
     },
     flight: {
       airline: 'Singapore Airlines',
@@ -57,10 +107,10 @@ const mockBundles = [
   {
     id: 2,
     hotel: {
-      name: 'W Taipei',
-      price: 320,
+      name: 'Morwing Hotel Fairy Tale',
+      price: 2020.50,
       rating: 4,
-      image: 'https://placehold.co/600x400/e7eaf6/343a40?text=W+Taipei',
+      image: MorwingHotelFairyTale,
       description: 'A stylish and modern hotel located in the vibrant Xinyi district.'
     },
     flight: null,
@@ -92,6 +142,16 @@ const BundleDealAI = () => {
   const [prompt, setPrompt] = useState('');
   const [bundles, setBundles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const roomModalRef = useRef(null);
+  const [selectedHotel, setSelectedHotel] = useState(null);
+  const hotelModalRef = useRef(null);
+
+  useOutsideClick(roomModalRef, () => setSelectedRoom(null));
+  useOutsideClick(hotelModalRef, () => setSelectedHotel(null));
+
+  const handleHotelClick = (hotel) => {
+    setSelectedHotel(hotel);
+  };
 
   const handleGenerate = () => {
     if (!prompt) return;
@@ -107,7 +167,7 @@ const BundleDealAI = () => {
       let total = bundle.hotel.price;
       if (bundle.flight) total += bundle.flight.price;
       if (bundle.tour) total += bundle.tour.price;
-      return total;
+      return total.toFixed(2);
   }
 
   return (
@@ -179,7 +239,10 @@ const BundleDealAI = () => {
                         <h4 className="font-semibold text-gray-800 mb-3">What's included:</h4>
                         <div className="space-y-4">
                             {/* Hotel */}
-                            <div className="flex items-start p-3 bg-gray-50 rounded-lg">
+                            <div 
+                              className="flex items-start p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleHotelClick(bundle.hotel)}
+                            >
                                 <HotelIcon />
                                 <div>
                                     <p className="font-semibold text-gray-800">Hotel Stay</p>
@@ -246,6 +309,89 @@ const BundleDealAI = () => {
                 <h2 className="text-xl font-semibold text-gray-700">Let's find your next adventure!</h2>
                 <p className="text-gray-500 mt-2">Enter a description of your ideal trip above to get started.</p>
             </div>
+        )}
+
+        {/* Hotel Modal */}
+        {selectedHotel && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div
+              ref={roomModalRef}
+              className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 overflow-y-auto max-h-[90vh]"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">{selectedHotel.rooms[0].roomDescription}</h2>
+                <button
+                  onClick={() => setSelectedHotel(null)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <img
+                src={selectedHotel.rooms[0].images[0].high_resolution_url}
+                alt={selectedHotel.rooms[0].roomDescription}
+                className="w-full h-56 object-cover rounded mb-4"
+              />
+
+              {/* Long Description */}
+              <div
+                className="text-sm text-gray-700 space-y-2 mb-6"
+                dangerouslySetInnerHTML={{ __html: selectedHotel.rooms[0].long_description }}
+              />
+
+              {/* Room Details */}
+              <div className="space-y-4">
+                {/* Breakfast Info */}
+                <p className="text-sm">
+                  <strong>Breakfast:</strong>{' '}
+                  {formatBreakfast(selectedHotel.rooms[0].roomAdditionalInfo?.breakfastInfo)}
+                </p>
+
+                {/* Know Before You Go */}
+                {selectedHotel.rooms[0].roomAdditionalInfo?.displayFields?.know_before_you_go && (
+                  <div>
+                    <h3 className="font-semibold text-sm mb-1">Know Before You Go:</h3>
+                    <div
+                      className="text-sm text-gray-600"
+                      dangerouslySetInnerHTML={{
+                        __html: selectedHotel.rooms[0].roomAdditionalInfo.displayFields.know_before_you_go
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Optional Fees */}
+                {selectedHotel.rooms[0].roomAdditionalInfo?.displayFields?.fees_optional && (
+                  <div>
+                    <h3 className="font-semibold text-sm mb-1">Optional Fees:</h3>
+                    <div
+                      className="text-sm text-gray-600"
+                      dangerouslySetInnerHTML={{
+                        __html: selectedHotel.rooms[0].roomAdditionalInfo.displayFields.fees_optional
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Price and Book Button */}
+              <div className="flex justify-between items-center mt-6">
+                <div>
+                  <p className="text-sm text-gray-500">Price per night</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    ${selectedHotel.rooms[0].converted_price}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedHotel(null)}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </main>
     </div>
