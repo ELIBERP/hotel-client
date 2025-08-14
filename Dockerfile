@@ -10,17 +10,25 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ARG VITE_GOOGLEMAP_API_KEY
 ENV VITE_GOOGLEMAP_API_KEY=$VITE_GOOGLEMAP_API_KEY
 
+# Copy package files first
 COPY package.json package-lock.json ./
-RUN npm ci
+
+# Remove any platform-specific rollup binaries before installing
+RUN grep -v "@rollup/rollup-darwin-" package.json > package.json.tmp && mv package.json.tmp package.json
+
+# Install dependencies
+RUN npm install --no-package-lock
+
+# Fix Rollup binary issues by ensuring the correct platform binary is available
+RUN npm install --no-package-lock @rollup/rollup-linux-x64-gnu
+
+# Copy the rest of the application
 COPY . .
 
-# Fix Rollup binary issues
-RUN npm install -g @rollup/rollup-linux-x64-gnu
-RUN npm install @rollup/rollup-linux-x64-gnu
-
-# Build the app
+# Build the app with production configuration
 RUN npm run build
 
+# Use Nginx to serve the static files
 FROM nginx:alpine
 
 # Default for local/dev; Render will inject/override PORT at runtime
