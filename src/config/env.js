@@ -10,6 +10,15 @@ const config = {
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
   apiTimeout: parseInt(import.meta.env.VITE_API_TIMEOUT) || 10000000,
   
+  // Google Maps Configuration
+  googleMaps: {
+    apiKey: import.meta.env.VITE_GOOGLEMAP_API_KEY || 'AIzaSyAMA3VTBdscv_40tdyz0X4kfJKPG2i97QM',
+    // Note: Map ID must be a valid ID from Google Cloud Console > Google Maps Platform > Map Styles
+    mapId: import.meta.env.VITE_GOOGLEMAP_MAP_ID || '49c42cdb73def9de35db75de', // Default Map ID
+    libraries: ['marker'], // Default libraries 
+    version: 'beta' // Using beta for Advanced Markers
+  },
+  
   // App Information
   appName: isTestEnvironment 
     ? (process.env.VITE_APP_NAME || 'StayEase')
@@ -46,6 +55,15 @@ const validateConfig = () => {
   if (config.apiBaseUrl && !config.apiBaseUrl.match(/^https?:\/\//)) {
     console.warn('API base URL should include protocol (http:// or https://)');
   }
+  
+  // Validate Google Maps configuration
+  if (!config.googleMaps.apiKey) {
+    console.warn('Google Maps API key is missing. Set VITE_GOOGLEMAP_API_KEY in your .env file.');
+  }
+  
+  if (!import.meta.env.VITE_GOOGLEMAP_MAP_ID) {
+    console.info('Using default Google Maps Map ID. Set VITE_GOOGLEMAP_MAP_ID in your .env file for a custom map style.');
+  }
 };
 
 // Run validation in development (but not in tests)
@@ -73,7 +91,12 @@ export const logEnvironmentInfo = () => {
       appName: config.appName,
       appVersion: config.appVersion,
       isDevelopment: config.isDevelopment,
-      debugMode: config.debugMode
+      debugMode: config.debugMode,
+      googleMaps: {
+        apiKeyConfigured: !!config.googleMaps.apiKey,
+        mapId: config.googleMaps.mapId,
+        version: config.googleMaps.version
+      }
     });
   }
 };

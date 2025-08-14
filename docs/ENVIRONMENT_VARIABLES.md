@@ -10,6 +10,10 @@ These are embedded in the client bundle and visible to users:
 VITE_API_BASE_URL=https://api.yourdomain.com
 VITE_API_TIMEOUT=10000
 
+# Google Maps configuration
+VITE_GOOGLEMAP_API_KEY=your-api-key-here
+VITE_GOOGLEMAP_MAP_ID=your-map-id-here   # Required for Advanced Markers API
+
 # App metadata
 VITE_APP_NAME=StayEase
 VITE_APP_VERSION=1.0.0
