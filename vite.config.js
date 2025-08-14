@@ -13,26 +13,22 @@ export default defineConfig({
   define: {
     // Vite allows defining global constants which can be used throughout your app.
     // This ensures that the environment variable is available to the client-side.
-    'process.env': process.env,
+    // 'process.env': process.env,
   },
   build: {
+    // Don't externalize Google Maps to ensure it's properly bundled
     rollupOptions: {
-      // Externalizing google maps as an external resource to ensure Vite handles it correctly
-      external: ['https://maps.googleapis.com'],
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
     },
   },
-  // server: {
-  //   // In case you're running a backend API, you can proxy requests to avoid CORS issues
-  //   proxy: {
-  //     '/maps-api': 'https://maps.googleapis.com',
-  //   },
-  // },
-  // Add headers to handle Content Security Policy (CSP) if necessary
-  // Make sure the Google Maps API can be loaded even with strict CSP rules.
-  // Uncomment the following if you want to set CSP in the development environment
   server: {
+    // Add headers to handle Content Security Policy (CSP)
     headers: {
-      'Content-Security-Policy': "script-src 'self' https://maps.googleapis.com;",
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://maps.googleapis.com https://*.gstatic.com https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com; img-src 'self' data: https://*.googleapis.com https://*.gstatic.com https://*.ggpht.com https://lh3.googleusercontent.com https://*.cloudfront.net https://*.travelapi.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http://localhost:3000 https://*.googleapis.com https://*.gstatic.com;",
     },
   },
 });

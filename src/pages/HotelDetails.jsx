@@ -3,7 +3,6 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import ApiService from '../services/api';
 import Map from '../components/Map';
 import RoomGrid from '../components/RoomGrid';
-import { LoadScript } from '@react-google-maps/api';
 import Skeleton from '../components/Skeleton';
 import Spinner from '../components/Spinner';
 import { roomAmenityKeys } from '../constants/amenities';
@@ -58,7 +57,7 @@ const HotelHeaderSkeleton = () => (
 );
 
 const RoomGridSkeleton = ({ count = 6 }) => (
-  <div div data-testid="room-grid-skeleton" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+  <div data-testid="room-grid-skeleton" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
     {Array.from({ length: count }).map((_, i) => (
       <div key={i} className="rounded-xl border bg-white p-4 shadow-sm">
         <Skeleton className="w-full h-40 rounded-lg mb-3" />
@@ -105,7 +104,6 @@ const HotelDetails = () => {
     nights: 0,
     price: 0,
   });
-  const [googleApiLoaded, setGoogleApiLoaded] = useState(false); // State to track if Google Maps API is loaded
 
   // Get query parameters from the URL
   const queryParams = new URLSearchParams(location.search);
@@ -743,20 +741,7 @@ const aboutText = htmlToText(aboutOnlyHtml);
           </div>
         )}
 
-        {/* <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLEMAP_API_KEY}> */}
-        {/* I really shouldnt expose this haha */}
-        {!googleApiLoaded && (
-          <LoadScript
-            googleMapsApiKey={import.meta.env.VITE_GOOGLEMAP_API_KEY}
-            onLoad={() => setGoogleApiLoaded(true)}
-            loadingElement={<></>}         // 👈 hides the default "Loading..."
-            // or: loading={<></>}         // 👈 if your version uses `loading`
-          >
-            <div style={{ display: 'none' }}>
-              <Map coordinates={{ lat: hotel.latitude, lng: hotel.longitude }} height="0px" />
-            </div>
-          </LoadScript>
-        )}
+        {/* Map API loading is now handled inside the Map component */}
         <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-10">
           <h2 className="text-2xl font-bold text-[#0e151b] mb-4">Choose your room</h2>
 

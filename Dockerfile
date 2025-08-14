@@ -2,9 +2,13 @@
 FROM node:18 as build
 WORKDIR /app
 
-# 👇 pull from Render as build-arg and expose to the build env
+# Pull environment variables from Render build args
 ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
+# Add Google Maps API key
+ARG VITE_GOOGLEMAP_API_KEY
+ENV VITE_GOOGLEMAP_API_KEY=$VITE_GOOGLEMAP_API_KEY
 
 COPY package.json package-lock.json ./
 RUN npm ci
