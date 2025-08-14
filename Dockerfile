@@ -12,20 +12,17 @@ ENV VITE_GOOGLEMAP_API_KEY=$VITE_GOOGLEMAP_API_KEY
 
 # Copy package files first
 COPY package.json package-lock.json ./
-
-# Remove any platform-specific rollup binaries before installing
-RUN grep -v "@rollup/rollup-darwin-" package.json > package.json.tmp && mv package.json.tmp package.json
-
-# Install dependencies
-RUN npm install --no-package-lock
-
-# Fix Rollup binary issues by ensuring the correct platform binary is available
-RUN npm install --no-package-lock @rollup/rollup-linux-x64-gnu
-
-# Copy the rest of the application
+# Force npm to ignore platform checks during install
+ENV npm_config_force=true
+ENV npm_config_ignore_scripts=true
+RUN npm install
 COPY . .
 
-# Build the app with production configuration
+# Fix Rollup binary issues for Linux
+RUN npm install --no-save --force @rollup/rollup-linux-x64-gnu
+RUN npm uninstall --no-save @rollup/rollup-darwin-arm64 || true
+
+# Build the app
 RUN npm run build
 
 # Use Nginx to serve the static files
