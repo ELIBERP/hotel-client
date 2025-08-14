@@ -747,7 +747,7 @@ const aboutText = htmlToText(aboutOnlyHtml);
         {/* I really shouldnt expose this haha */}
         {!googleApiLoaded && (
           <LoadScript
-            googleMapsApiKey={import.meta.env.VITE_GOOGLEMAP_API_KEY}
+            googleMapsApiKey={klnfnkl}
             onLoad={() => setGoogleApiLoaded(true)}
             loadingElement={<></>}         // 👈 hides the default "Loading..."
             // or: loading={<></>}         // 👈 if your version uses `loading`

@@ -60,6 +60,6 @@ describe('Feature 3 - E2E', () => {
       .click();
 
     // Add an assertion here to confirm the action, e.g., URL change or a new element appearing
-    // cy.url().should('include', 'booking-confirmation');
+    cy.url().should('include', 'booking-form');
   });
 });
