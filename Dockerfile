@@ -10,6 +10,7 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ARG VITE_GOOGLEMAP_API_KEY
 ENV VITE_GOOGLEMAP_API_KEY=$VITE_GOOGLEMAP_API_KEY
 
+# Copy package files first
 COPY package.json package-lock.json ./
 # Force npm to ignore platform checks during install
 ENV npm_config_force=true
@@ -24,6 +25,7 @@ RUN npm uninstall --no-save @rollup/rollup-darwin-arm64 || true
 # Build the app
 RUN npm run build
 
+# Use Nginx to serve the static files
 FROM nginx:alpine
 
 # Default for local/dev; Render will inject/override PORT at runtime
