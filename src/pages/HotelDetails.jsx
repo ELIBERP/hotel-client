@@ -30,7 +30,7 @@ const formatBreakfast = (code) => {
 };
 
 const HotelHeaderSkeleton = () => (
-  <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-6">
+  <div data-testid="hotel-header-skeleton" className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-6">
     <div className="w-full border-b border-gray-200 bg-white mb-6">
       <div className="w-full px-6 sm:px-16 py-4 bg-[#f2f2f4] rounded-xl shadow-sm">
         <Skeleton className="h-10 w-full rounded-lg" />
@@ -58,7 +58,7 @@ const HotelHeaderSkeleton = () => (
 );
 
 const RoomGridSkeleton = ({ count = 6 }) => (
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+  <div div data-testid="room-grid-skeleton" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
     {Array.from({ length: count }).map((_, i) => (
       <div key={i} className="rounded-xl border bg-white p-4 shadow-sm">
         <Skeleton className="w-full h-40 rounded-lg mb-3" />
@@ -162,7 +162,7 @@ const formatGuestsParam = () => {
   return Array(roomCount).fill(total).join('|');
 };
 
-// Submit: navigate to /hotels (the results page handles fetching/pricing)
+// Submit: navigate to /search ()
 const handleMiniSearch = (e) => {
   e.preventDefault();
 
@@ -171,13 +171,18 @@ const handleMiniSearch = (e) => {
   if (!destId) return; // require destination
 
   const qs = new URLSearchParams({
-    destination_id: destId,
-    checkin: checkinDate || '',
-    checkout: checkoutDate || '',
-    guests: formatGuestsParam(),
-  }).toString();
+  destination_id: destId,
+  checkin: checkinDate,
+  checkout: checkoutDate,
+  guests: formatGuestsParam(),
+  lang: 'en_US',
+  currency: 'SGD',
+  partner_id: 1089,
+  landing_page: 'wl-acme-earn',
+  product_type: 'earn'
+}).toString();
 
-  navigate(`/hotels?${qs}`, { state: { hasSearched: true } });
+  navigate(`/search?${qs}`, { state: { hasSearched: true } });
 };
 
   const extractBedCount = (long_description) => { // to filter by bed count, we extract bed count from long desc

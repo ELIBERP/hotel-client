@@ -29,7 +29,7 @@ const RoomGrid = ({ rooms = [], loading = false, onRoomClick, roomHideKeys }) =>
 
   if (loading) return null;
   if (!Array.isArray(rooms) || rooms.length === 0) {
-    return <p>No rooms available for selected filter.</p>;
+    return <p>No rooms available.</p>;
   }
 
   const hideSet =

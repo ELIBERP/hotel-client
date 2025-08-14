@@ -5,6 +5,7 @@ import HotelDetails from '../../../src/pages/HotelDetails';
 import ApiService from '../../../src/services/api';
 import mockHotel from './mockHotel'
 import mockHotelRooms from './mockHotelRooms';
+import mockNoHotelRooms from './mockNoHotelRooms';
 
 
 vi.mock('../../../src/services/api', () => ({
@@ -26,7 +27,7 @@ vi.mock('../../../src/services/api', () => ({
       if (id === 'validID' && query) {
         return Promise.resolve(mockHotelRooms);
       } else {
-        return Promise.reject(new Error('Failed to fetch rooms for invalid ID or query'));
+        return Promise.resolve(mockNoHotelRooms);
       }
     }),
   },
@@ -50,6 +51,7 @@ vi.mock('react-router-dom', async (importOriginal) => {
 });
 
 describe('HotelDetails Integration', () => {
+  // ====== 10. Hotel Name Display Test ========== //
   it('should display the hotel name after API data is fetched', async () => {
     // Render the component within a BrowserRouter
     render(
@@ -73,4 +75,149 @@ describe('HotelDetails Integration', () => {
     expect(ApiService.getHotelById).toHaveBeenCalledWith('validID');
     expect(ApiService.getHotelRoomsByID).toHaveBeenCalled();
   });
+
+  // ====== 11. Display Skeleton ========== //
+  it('should display skeleton loaders while fetching data', () => {
+    render(
+      <BrowserRouter>
+        <HotelDetails />
+      </BrowserRouter>
+    );
+
+    const headerSkeleton = screen.getByTestId('hotel-header-skeleton');
+    const roomGridSkeleton = screen.getByTestId('room-grid-skeleton');
+
+    expect(headerSkeleton).toBeInTheDocument();
+    expect(roomGridSkeleton).toBeInTheDocument();
+  });
+
+  // ====== 12. Correct API service called ========== //
+  it('should call the API services with correct parameters on initial render', async () => {
+    // Render the component
+    render(
+      <BrowserRouter>
+        <HotelDetails />
+      </BrowserRouter>
+    );
+
+    // Wait for API calls to complete
+    await new Promise(process.nextTick);
+
+    // Assert that the API functions were called with the correct parameters
+    expect(ApiService.getHotelById).toHaveBeenCalledWith('validID');
+    expect(ApiService.getHotelRoomsByID).toHaveBeenCalledWith('validID', {
+      destination_id: '1',
+      checkin: '2025-08-15',
+      checkout: '2025-08-18',
+      guests: '2',
+      currency: 'USD',
+      country_code: 'SG',
+      lang: 'en',
+      partner_id: 1,
+    });
+  });
+
+  // ====== 13. Main Image and Gallery Images Test ========== //
+  it('should display the main hotel image and gallery images', async () => {
+    render(
+      <BrowserRouter>
+        <HotelDetails />
+      </BrowserRouter>
+    );
+
+    // Wait for the main image to appear
+    await waitFor(() => {
+      const mainImage = screen.getByAltText('Main Hotel View');
+      expect(mainImage).toBeInTheDocument();
+      // Verify the src matches the first image in mockHotel (image_details + hires_image_index)
+      const expectedMainSrc = `${mockHotel.image_details.prefix}${mockHotel.hires_image_index.split(',')[0].trim()}${mockHotel.image_details.suffix}`;
+      expect(mainImage).toHaveAttribute('src', expectedMainSrc);
+    });
+
+    // Check for gallery images (assuming there are some in mockHotel)
+    // You might need a more specific query if multiple images have similar alt text
+    const galleryImages = screen.getAllByAltText(/Hotel image \d+/i);
+    expect(galleryImages.length).toBeGreaterThan(0);
+    // You can further assert that the src of some gallery images matches your mock
+  });
+
+  // ====== 14. Hotel Amenities Test ========== //
+  it('should display hotel amenities', async () => {
+    render(
+      <BrowserRouter>
+        <HotelDetails />
+      </BrowserRouter>
+    );
+
+    await waitFor(() => {
+      // Check for the "Hotel Amenities" heading
+      const amenitiesHeading = screen.getByRole('heading', { name: /Hotel Amenities/i });
+      expect(amenitiesHeading).toBeInTheDocument();
+
+      // Check for a few expected amenity chips based on mockHotel.amenities
+      expect(screen.getByLabelText('Hotel amenities').textContent).toContain('Air conditioning');
+      expect(screen.getByLabelText('Hotel amenities').textContent).toContain('Dry Cleaning');
+    });
+  });
+
+  // ====== 15. Room Grid and Filter Buttons Test ========== //
+  it('should display room grid and filter buttons when rooms are available', async () => {
+    render(
+      <BrowserRouter>
+        <HotelDetails />
+      </BrowserRouter>
+    );
+
+    await waitFor(() => {
+      // Check for "Choose your room" heading
+      const chooseRoomHeading = screen.getByRole('heading', { name: /Choose your room/i });
+      expect(chooseRoomHeading).toBeInTheDocument();
+
+      // Check for filter buttons
+      expect(screen.getByRole('button', { name: /All Rooms/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /1 Bed/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /2 Beds/i })).toBeInTheDocument();
+
+      // Check that room cards are rendered (e.g., by finding a room description from the mock)
+      expect(screen.getByText(/Double Room/i)).toBeInTheDocument();
+
+      const roomDescriptions = screen.getAllByText(/Room/i);
+      expect(roomDescriptions.length).toBeGreaterThan(0); // Ensure at least some rooms are displayed
+    });
+  });
+  
+  // ====== 16. Invalid Hotel ID ========== //
+  it('should not display hotel name when API call fails due to invalid ID', async () => {
+    // Override the mock to simulate an invalid ID for this test.
+    vi.doMock('react-router-dom', async (importOriginal) => {
+      const actual = await importOriginal();
+      return {
+        ...actual,
+        useParams: () => ({ id: 'invalidID' }),
+        useLocation: () => ({
+          search: '?destination_id=1&checkin=2025-08-15&checkout=2025-08-18&guests=2&currency=USD&lang=en',
+          state: { nearbyHotels: [] },
+        }),
+        useNavigate: () => vi.fn(),
+      };
+    });
+    
+    // Dynamically import the component after setting up the specific mock
+    const { default: HotelDetails } = await import('../../../src/pages/HotelDetails');
+
+    render(
+      <BrowserRouter>
+        <HotelDetails />
+      </BrowserRouter>
+    );
+
+    // Wait for the API call to fail and the component to re-render.
+    // The queryBy... methods are used here because they return null if the element isn't found,
+    // which is what we expect in this error case.
+    await waitFor(() => {
+      const hotelNameElement = screen.queryByRole('heading', { name: /The Inn At Temple Street/i });
+      expect(hotelNameElement).not.toBeInTheDocument();
+    });
+  });
 });
+
