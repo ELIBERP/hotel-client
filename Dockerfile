@@ -11,12 +11,15 @@ ARG VITE_GOOGLEMAP_API_KEY
 ENV VITE_GOOGLEMAP_API_KEY=$VITE_GOOGLEMAP_API_KEY
 
 COPY package.json package-lock.json ./
-RUN npm ci
+# Force npm to ignore platform checks during install
+ENV npm_config_force=true
+ENV npm_config_ignore_scripts=true
+RUN npm install
 COPY . .
 
-# Fix Rollup binary issues
-RUN npm install -g @rollup/rollup-linux-x64-gnu
-RUN npm install @rollup/rollup-linux-x64-gnu
+# Fix Rollup binary issues for Linux
+RUN npm install --no-save --force @rollup/rollup-linux-x64-gnu
+RUN npm uninstall --no-save @rollup/rollup-darwin-arm64 || true
 
 # Build the app
 RUN npm run build
