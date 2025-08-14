@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+import config from '../config/env';
 
 const Map = ({ coordinates, marker = true, height = '400px', zoom = 15 }) => {
   const [mapError, setMapError] = useState(null);
@@ -8,13 +9,13 @@ const Map = ({ coordinates, marker = true, height = '400px', zoom = 15 }) => {
   // Handle map loading and errors independently in each component
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLEMAP_API_KEY,
-    nonce: import.meta.env.VITE_CSP_NONCE || undefined, // Optional nonce for CSP
+    googleMapsApiKey: config.googleMaps.apiKey,
+    nonce: config.cspNonce || undefined, // Optional nonce for CSP
   });
 
   useEffect(() => {
     // Log the API key status (do not log the actual key in production)
-    if (import.meta.env.VITE_GOOGLEMAP_API_KEY) {
+    if (config.googleMaps.apiKey) {
       console.log("Google Maps API key is configured");
     } else {
       console.warn("Google Maps API key is missing");
