@@ -1,20 +1,29 @@
 // pages/FindBooking.jsx
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import ApiService from '../services/api';
 import { formatCurrency } from '../utils/pricing';
 
 const FindBooking = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [bookingId, setBookingId] = useState('');
   const [bookingData, setBookingData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    
-    if (!bookingId.trim()) {
+  // Check if booking ID was passed from navigation (e.g., from user dropdown)
+  useEffect(() => {
+    if (location.state?.bookingId) {
+      const passedBookingId = location.state.bookingId;
+      setBookingId(passedBookingId);
+      // Automatically search for the booking
+      searchBookingById(passedBookingId);
+    }
+  }, [location.state]);
+
+  const searchBookingById = async (id) => {
+    if (!id?.trim()) {
       setError('Please enter a booking reference ID');
       return;
     }
@@ -24,7 +33,7 @@ const FindBooking = () => {
     setBookingData(null);
 
     try {
-      const response = await ApiService.get(`/api/public/bookings/find/${bookingId.trim()}`);
+      const response = await ApiService.get(`/api/public/bookings/find/${id.trim()}`);
       
       if (response.success && response.data) {
         setBookingData(response.data);
@@ -41,6 +50,11 @@ const FindBooking = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    await searchBookingById(bookingId);
   };
 
   const renderBookingDetails = (booking) => (

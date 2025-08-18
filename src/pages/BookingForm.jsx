@@ -63,6 +63,40 @@ const BookingForm = () => {
     }
   }, [user, isAuthenticated]); 
 
+  // Restore booking data from localStorage if available (after login)
+  useEffect(() => {
+    const savedBookingData = localStorage.getItem('pendingBookingData');
+    if (savedBookingData && isAuthenticated()) {
+      try {
+        const parsedData = JSON.parse(savedBookingData);
+        console.log('Restoring booking data from localStorage:', parsedData);
+        setFormData(prev => ({
+          ...prev,
+          ...parsedData,
+          // Ensure user data is still used for email/name if available
+          firstName: user?.firstName || parsedData.firstName,
+          lastName: user?.lastName || parsedData.lastName,
+          email: user?.email || parsedData.email
+        }));
+        // Clear the saved data after restoring
+        localStorage.removeItem('pendingBookingData');
+      } catch (error) {
+        console.error('Error restoring booking data:', error);
+        localStorage.removeItem('pendingBookingData');
+      }
+    }
+  }, [isAuthenticated, user]);
+
+  // Clear saved booking data when component unmounts (user navigates away)
+  useEffect(() => {
+    return () => {
+      // Only clear if user is authenticated (booking is being used)
+      if (isAuthenticated()) {
+        localStorage.removeItem('pendingBookingData');
+      }
+    };
+  }, [isAuthenticated]); 
+
   // Populate form with hotel details from navigation state
   useEffect(() => {
     const hd = location.state?.hotelDetails; // { id, name, room, checkIn, checkOut, guests, nights, price, currency? }
@@ -90,6 +124,19 @@ const BookingForm = () => {
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: null }));
     }
+  };
+
+  const handleLoginRedirect = () => {
+    // Save current booking data to localStorage before navigating to login
+    try {
+      localStorage.setItem('pendingBookingData', JSON.stringify(formData));
+      console.log('Booking data saved to localStorage before login redirect');
+    } catch (error) {
+      console.error('Error saving booking data:', error);
+    }
+    
+    // Navigate to login with current location for return
+    navigate('/login', { state: { from: location } });
   };
 
   const validateGuestInfo = () => {
@@ -134,7 +181,7 @@ const BookingForm = () => {
       
       if (!authCheck || !token) {
         alert('Please login to create a booking. Redirecting to login page...');
-        navigate('/login', { state: { from: location } });
+        handleLoginRedirect();
         return;
       }
 
@@ -149,7 +196,7 @@ const BookingForm = () => {
       
       if (error.message.includes('login') || error.message.includes('401')) {
         alert('Your session has expired. Please login again.');
-        navigate('/login', { state: { from: location } });
+        handleLoginRedirect();
       } else {
         alert(`Failed to prepare booking: ${error.message}`);
       }
@@ -407,7 +454,7 @@ const BookingForm = () => {
                 You must be logged in to create a booking. Your booking will be saved to your account.
               </p>
               <button
-                onClick={() => navigate('/login', { state: { from: location } })}
+                onClick={handleLoginRedirect}
                 className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
               >
                 Login to Continue

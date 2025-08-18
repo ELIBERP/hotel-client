@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Toast from './Toast';
+import { useToast } from '../hooks/useToast';
 
 const RegisterForm = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
+  const { toasts, showSuccess, showError, hideToast } = useToast();
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -91,14 +94,18 @@ const RegisterForm = () => {
       
       if (result.success) {
         console.log('✅ Registration successful!');
-        alert('Registration successful! Welcome to StayEase!');
-        navigate('/');
+        showSuccess('Registration successful! Welcome to StayEase!');
+        setTimeout(() => {
+          navigate('/');
+        }, 1500); // Give time for user to see the toast
       } else {
         console.log('❌ Registration failed:', result.error);
+        showError(result.error || 'Registration failed. Please try again.');
         setErrors({ form: result.error });
       }
     } catch (error) {
       console.log('❌ Registration error:', error.message);
+      showError('Something went wrong. Please try again.');
       setErrors({ form: 'Something went wrong. Please try again.' });
     } finally {
       setIsLoading(false);
@@ -319,6 +326,17 @@ const RegisterForm = () => {
           </Link>
         </p>
       </div>
+      
+      {/* Toast notifications */}
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          duration={toast.duration}
+          onClose={() => hideToast(toast.id)}
+        />
+      ))}
     </div>
   );
 };

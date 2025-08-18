@@ -78,11 +78,13 @@ const LoginForm = () => {
         }, 1500); // Give time for user to see the toast
       } else {
         console.log('❌ Login failed:', result.error);
-        setErrors({ form: result.error });
+        showError('Login failed. Please try again or register.');
+        setErrors({ form: 'Login failed. Please try again or register.' });
       }
     } catch (error) {
       console.log('❌ Login error:', error.message);
-      setErrors({ form: 'Something went wrong. Please try again.' });
+      showError('Login failed. Please try again or register.');
+      setErrors({ form: 'Login failed. Please try again or register.' });
     } finally {
       setIsLoading(false);
     }
