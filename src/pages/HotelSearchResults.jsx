@@ -70,13 +70,20 @@ const HotelSearchResults = () => {
     isPollingRef.current = true;
     abortPollRef.current = false;
     try {
-      let priceData = await ApiService.getHotelsPrice(priceQuery);
+      // COMMENTED OUT (API CALL)
+      // let priceData = await ApiService.getHotelsPrice(priceQuery);
+      let priceData = { hotels: [
+        { id: 'mock-1', name: 'Mock Hotel 1', price: 199, currency: 'USD' },
+        { id: 'mock-2', name: 'Mock Hotel 2', price: 299, currency: 'USD' }
+      ]};
       // let pollCount = 0;
       // let unchangedRounds = 0;
       // let lastCount = priceData?.hotels?.length || 0;
       // while (!abortPollRef.current && priceData && priceData.completed !== true && pollCount < 20) { 
       //   await new Promise(res => setTimeout(res, 1500)); // 1.5s interval to ease load
-      //   const next = await ApiService.getHotelsPrice(priceQuery);
+      //   // COMMENTED OUT (API CALL)
+      //   // const next = await ApiService.getHotelsPrice(priceQuery);
+      //   const next = priceData; // Use static data
       //   const currentCount = next?.hotels?.length || 0;
       //   if (currentCount === lastCount) {
       //     unchangedRounds += 1;
@@ -129,8 +136,17 @@ const HotelSearchResults = () => {
     setShowDestSuggestions(false);
 
     try {
+      // COMMENTED OUT (API CALL)
       // Fetch hotels list directly
-      const hotelData = await ApiService.getHotels({ destination_id: destId });
+      // const hotelData = await ApiService.getHotels({ destination_id: destId });
+      
+      // Use static data
+      const hotelData = { 
+        hotels: [
+          { id: 'mock-1', name: 'Mock Hotel 1', stars: 4, price: 199, currency: 'USD', thumbnail: 'https://placehold.co/600x400?text=Mock+Hotel+1' },
+          { id: 'mock-2', name: 'Mock Hotel 2', stars: 5, price: 299, currency: 'USD', thumbnail: 'https://placehold.co/600x400?text=Mock+Hotel+2' }
+        ]
+      };
       
       // Ensure hotels is always an array
       if (Array.isArray(hotelData)) {
@@ -184,9 +200,16 @@ const HotelSearchResults = () => {
         console.log('Using preloaded search results from navigation state');
         hotelData = preloadedResults;
       } else {
-        console.log('No preloaded results, making API call for hotels');
+        console.log('No preloaded results, using static data instead of API call');
+        // COMMENTED OUT (API CALL)
         // Use ApiService.getHotels for hotel list
-        hotelData = await ApiService.getHotels({ destination_id: destinationId });
+        // hotelData = await ApiService.getHotels({ destination_id: destinationId });
+        hotelData = { 
+          hotels: [
+            { id: 'mock-1', name: 'Mock Hotel 1', stars: 4, price: 199, currency: 'USD', thumbnail: 'https://placehold.co/600x400?text=Mock+Hotel+1' },
+            { id: 'mock-2', name: 'Mock Hotel 2', stars: 5, price: 299, currency: 'USD', thumbnail: 'https://placehold.co/600x400?text=Mock+Hotel+2' }
+          ]
+        };
       }
       
       // Ensure hotels is always an array

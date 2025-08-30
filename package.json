@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.7",
+    "@rollup/rollup-darwin-arm64": "^4.46.2",
     "@stripe/react-stripe-js": "^3.8.0",
     "@stripe/stripe-js": "^7.6.1",
     "@tailwindcss/vite": "^4.1.11",

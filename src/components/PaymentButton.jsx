@@ -63,18 +63,31 @@ const PaymentButton = ({ bookingData, isSubmitting, onBeforePayment }) => {
       
       console.log('Request data:', requestData);
       
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${ApiService.getAuthToken()}`,
-        },
-        body: JSON.stringify(requestData),
-      });
+      // COMMENTED OUT (API CALL)
+      // const response = await fetch(apiUrl, {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     'Authorization': `Bearer ${ApiService.getAuthToken()}`,
+      //   },
+      //   body: JSON.stringify(requestData),
+      // });
+      
+      console.log('Using mock payment response');
 
-      console.log('Response status:', response.status);
-
-      const data = await response.json();
+      // console.log('Response status:', response.status);
+      // const data = await response.json();
+      
+      // Mock response data
+      // Generate a mock booking reference
+      const mockReference = 'MOCK-' + Math.floor(Math.random() * 100000);
+      console.log('Generated mock booking reference:', mockReference);
+      
+      const data = {
+        success: true,
+        payment_url: `${window.location.origin}/find-booking?booking_reference=${mockReference}`,
+        session_id: 'mock_session_123'
+      };
       console.log('Response data:', data);
       
       if (data.payment_url) {

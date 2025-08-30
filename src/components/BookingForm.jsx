@@ -71,7 +71,12 @@ const BookingForm = () => {
     };
 
     try {
-      const response = await ApiService.createBooking(bookingData);
+      // COMMENTED OUT (API CALL)
+      // const response = await ApiService.createBooking(bookingData);
+      const response = { 
+        success: true, 
+        bookingReference: 'MOCK-' + Math.floor(Math.random() * 1000000) 
+      };
       alert(`✅ Booking Successful!\nReference: ${response.bookingReference}`);
     } catch (error) {
       alert("❌ Booking failed. Please try again.");

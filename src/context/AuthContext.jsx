@@ -26,7 +26,21 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      const response = await ApiService.login(credentials.email, credentials.password);
+      // COMMENTED OUT (API CALL)
+      // const response = await ApiService.login(credentials.email, credentials.password);
+      
+      // Mock successful login response
+      const response = {
+        success: true,
+        user: {
+          id: 'mock-user-123',
+          email: credentials.email,
+          name: 'Mock User',
+          role: 'user'
+        },
+        token: 'mock-jwt-token-123456789'
+      };
+      
       if (response.success) {
         ApiService.setUserData(response);
         setUser(response.user);
@@ -42,7 +56,21 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      const response = await ApiService.register(userData);
+      // COMMENTED OUT (API CALL)
+      // const response = await ApiService.register(userData);
+      
+      // Mock successful registration response
+      const response = {
+        success: true,
+        user: {
+          id: 'mock-user-' + Math.floor(Math.random() * 1000),
+          email: userData.email,
+          name: userData.name || 'New User',
+          role: 'user'
+        },
+        token: 'mock-jwt-token-' + Math.random().toString(36).substring(2)
+      };
+      
       if (response.success) {
         ApiService.setUserData(response);
         setUser(response.user);
@@ -61,6 +89,7 @@ export const AuthProvider = ({ children }) => {
       // Always clear user state first to prevent any UI glitches
       setUser(null);
       
+      // COMMENTED OUT (API CALL)
       // Call API logout (don't await to prevent delays)
       ApiService.logout();
       

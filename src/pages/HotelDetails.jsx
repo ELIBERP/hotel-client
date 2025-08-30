@@ -3,7 +3,6 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import ApiService from '../services/api';
 import Map from '../components/Map';
 import RoomGrid from '../components/RoomGrid';
-import { LoadScript } from '@react-google-maps/api';
 import Skeleton from '../components/Skeleton';
 import Spinner from '../components/Spinner';
 import { roomAmenityKeys } from '../constants/amenities';
@@ -58,7 +57,7 @@ const HotelHeaderSkeleton = () => (
 );
 
 const RoomGridSkeleton = ({ count = 6 }) => (
-  <div div data-testid="room-grid-skeleton" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+  <div data-testid="room-grid-skeleton" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
     {Array.from({ length: count }).map((_, i) => (
       <div key={i} className="rounded-xl border bg-white p-4 shadow-sm">
         <Skeleton className="w-full h-40 rounded-lg mb-3" />
@@ -105,7 +104,6 @@ const HotelDetails = () => {
     nights: 0,
     price: 0,
   });
-  const [googleApiLoaded, setGoogleApiLoaded] = useState(false); // State to track if Google Maps API is loaded
 
   // Get query parameters from the URL
   const queryParams = new URLSearchParams(location.search);
@@ -357,7 +355,21 @@ const preloadFirstWorking = (urls, timeoutMs = 8000) =>
 
     (async () => {
       try {
-        const hotelData = await ApiService.getHotelById(id);
+        // COMMENTED OUT (API CALL)
+        // const hotelData = await ApiService.getHotelById(id);
+        const hotelData = {
+          id: id,
+          name: 'Mock Hotel Details',
+          description: 'This is a static mock hotel for testing purposes. It has all the features a real hotel would have.',
+          address: '123 Test Street, Mockville',
+          stars: 4.5,
+          latitude: 37.7749,
+          longitude: -122.4194,
+          images: ['https://placehold.co/800x600?text=Mock+Hotel+Image'],
+          amenities: ['WiFi', 'Pool', 'Spa', 'Breakfast'],
+          rating: 4.7,
+          reviewCount: 285
+        };
         if (cancelled) return;
 
         // build candidates
@@ -402,7 +414,30 @@ useEffect(() => {
     partner_id: 1,
   };
 
-  ApiService.getHotelRoomsByID(id, query)
+  // COMMENTED OUT (API CALL)
+  // ApiService.getHotelRoomsByID(id, query)
+  Promise.resolve({
+    rooms: [
+      {
+        id: 'room-1',
+        name: 'Deluxe King Room',
+        description: 'Spacious room with king-size bed and city view',
+        price: 199,
+        currency: 'USD',
+        amenities: ['King bed', 'Free WiFi', 'Air conditioning', 'Flat-screen TV'],
+        images: ['https://placehold.co/800x600?text=Room+1']
+      },
+      {
+        id: 'room-2',
+        name: 'Executive Suite',
+        description: 'Luxury suite with separate living area',
+        price: 299,
+        currency: 'USD',
+        amenities: ['King bed', 'Sofa', 'Mini bar', 'Bathtub', 'Free breakfast'],
+        images: ['https://placehold.co/800x600?text=Room+2']
+      }
+    ]
+  })
     .then((roomsData) => {
       if (cancelled) return;
 
@@ -743,20 +778,7 @@ const aboutText = htmlToText(aboutOnlyHtml);
           </div>
         )}
 
-        {/* <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLEMAP_API_KEY}> */}
-        {/* I really shouldnt expose this haha */}
-        {!googleApiLoaded && (
-          <LoadScript
-            googleMapsApiKey={import.meta.env.VITE_GOOGLEMAP_API_KEY}
-            onLoad={() => setGoogleApiLoaded(true)}
-            loadingElement={<></>}         // 👈 hides the default "Loading..."
-            // or: loading={<></>}         // 👈 if your version uses `loading`
-          >
-            <div style={{ display: 'none' }}>
-              <Map coordinates={{ lat: hotel.latitude, lng: hotel.longitude }} height="0px" />
-            </div>
-          </LoadScript>
-        )}
+        {/* Map API loading is now handled inside the Map component */}
         <div className="w-full max-w-screen-xl mx-auto px-6 sm:px-16 py-10">
           <h2 className="text-2xl font-bold text-[#0e151b] mb-4">Choose your room</h2>
 

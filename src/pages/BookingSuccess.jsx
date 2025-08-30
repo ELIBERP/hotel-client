@@ -33,19 +33,23 @@ const BookingSuccess = () => {
         throw new Error('Authentication required');
       }
 
+      // COMMENTED OUT (API CALL)
       // First, let's try to confirm the payment
       try {
-        const confirmResponse = await fetch(buildApiUrl('/api/bookings/confirm-payment'), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
-          },
-          body: JSON.stringify({ sessionId })
-        });
+        // const confirmResponse = await fetch(buildApiUrl('/api/bookings/confirm-payment'), {
+        //   method: 'POST',
+        //   headers: {
+        //     'Content-Type': 'application/json',
+        //     'Authorization': `Bearer ${authToken}`
+        //   },
+        //   body: JSON.stringify({ sessionId })
+        // });
+        
+        // Mock response
+        const confirmResponse = { ok: true };
+        const confirmData = { success: true, bookingId: 'MOCK-' + Math.floor(Math.random() * 10000) };
 
         if (confirmResponse.ok) {
-          const confirmData = await confirmResponse.json();
           console.log('✅ Payment confirmed:', confirmData);
         }
       } catch (confirmError) {
@@ -56,18 +60,38 @@ const BookingSuccess = () => {
       // Wait a moment for webhook processing to complete
       await new Promise(resolve => setTimeout(resolve, 2000));
 
+      // COMMENTED OUT (API CALL)
       // Now fetch the user's latest bookings to find this payment
-      const bookingsResponse = await fetch(buildApiUrl('/api/bookings'), {
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        }
-      });
+      // const bookingsResponse = await fetch(buildApiUrl('/api/bookings'), {
+      //   headers: {
+      //     'Authorization': `Bearer ${authToken}`
+      //   }
+      // });
 
-      if (!bookingsResponse.ok) {
-        throw new Error('Failed to fetch booking details');
-      }
+      // if (!bookingsResponse.ok) {
+      //   throw new Error('Failed to fetch booking details');
+      // }
 
-      const bookingsData = await bookingsResponse.json();
+      // const bookingsData = await bookingsResponse.json();
+      
+      // Mock response
+      const bookingsData = {
+        bookings: [
+          {
+            id: 'MOCK-' + Math.floor(Math.random() * 10000),
+            sessionId: sessionId,
+            status: 'confirmed',
+            hotelName: 'Grand Mock Hotel',
+            roomType: 'Deluxe Suite',
+            checkInDate: '2025-09-20',
+            checkOutDate: '2025-09-23',
+            totalAmount: 499.99,
+            currency: 'USD',
+            guestName: 'Jane Doe',
+            createdAt: new Date().toISOString()
+          }
+        ]
+      };
       
       if (bookingsData.success && bookingsData.bookings?.length > 0) {
         // Find the most recent booking (likely the one just created)
@@ -101,19 +125,23 @@ const BookingSuccess = () => {
         throw new Error('Authentication required');
       }
 
-      const response = await fetch(buildApiUrl(`/api/bookings/${bookingId}/status`), {
-        method: 'PATCH',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
-        },
-        body: JSON.stringify({ status })
-      });
+      // COMMENTED OUT (API CALL)
+      // const response = await fetch(buildApiUrl(`/api/bookings/${bookingId}/status`), {
+      //   method: 'PATCH',
+      //   headers: { 
+      //     'Content-Type': 'application/json',
+      //     'Authorization': `Bearer ${authToken}`
+      //   },
+      //   body: JSON.stringify({ status })
+      // });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update booking status');
-      }
+      // if (!response.ok) {
+      //   const errorData = await response.json();
+      //   throw new Error(errorData.message || 'Failed to update booking status');
+      // }
+      
+      // Mock successful response
+      const response = { ok: true };
     } catch (error) {
       console.error('Error updating booking status:', error);
       // Don't throw here status update failure shouldn't break the success page
