@@ -355,7 +355,21 @@ const preloadFirstWorking = (urls, timeoutMs = 8000) =>
 
     (async () => {
       try {
-        const hotelData = await ApiService.getHotelById(id);
+        // COMMENTED OUT (API CALL)
+        // const hotelData = await ApiService.getHotelById(id);
+        const hotelData = {
+          id: id,
+          name: 'Mock Hotel Details',
+          description: 'This is a static mock hotel for testing purposes. It has all the features a real hotel would have.',
+          address: '123 Test Street, Mockville',
+          stars: 4.5,
+          latitude: 37.7749,
+          longitude: -122.4194,
+          images: ['https://placehold.co/800x600?text=Mock+Hotel+Image'],
+          amenities: ['WiFi', 'Pool', 'Spa', 'Breakfast'],
+          rating: 4.7,
+          reviewCount: 285
+        };
         if (cancelled) return;
 
         // build candidates
@@ -400,7 +414,30 @@ useEffect(() => {
     partner_id: 1,
   };
 
-  ApiService.getHotelRoomsByID(id, query)
+  // COMMENTED OUT (API CALL)
+  // ApiService.getHotelRoomsByID(id, query)
+  Promise.resolve({
+    rooms: [
+      {
+        id: 'room-1',
+        name: 'Deluxe King Room',
+        description: 'Spacious room with king-size bed and city view',
+        price: 199,
+        currency: 'USD',
+        amenities: ['King bed', 'Free WiFi', 'Air conditioning', 'Flat-screen TV'],
+        images: ['https://placehold.co/800x600?text=Room+1']
+      },
+      {
+        id: 'room-2',
+        name: 'Executive Suite',
+        description: 'Luxury suite with separate living area',
+        price: 299,
+        currency: 'USD',
+        amenities: ['King bed', 'Sofa', 'Mini bar', 'Bathtub', 'Free breakfast'],
+        images: ['https://placehold.co/800x600?text=Room+2']
+      }
+    ]
+  })
     .then((roomsData) => {
       if (cancelled) return;
 

@@ -1,20 +1,33 @@
 // pages/FindBooking.jsx
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import ApiService from '../services/api';
 import { formatCurrency } from '../utils/pricing';
 
 const FindBooking = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [bookingId, setBookingId] = useState('');
   const [bookingData, setBookingData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Check URL for booking reference on component mount
+  useEffect(() => {
+    const bookingReference = searchParams.get('booking_reference');
+    if (bookingReference) {
+      setBookingId(bookingReference);
+      // Auto search if reference is in URL
+      handleSearch(null, bookingReference);
+    }
+  }, [searchParams]);
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
+  const handleSearch = async (e, referenceFromUrl) => {
+    if (e) e.preventDefault();
     
-    if (!bookingId.trim()) {
+    const searchId = referenceFromUrl || bookingId;
+    
+    if (!searchId.trim()) {
       setError('Please enter a booking reference ID');
       return;
     }
@@ -24,7 +37,24 @@ const FindBooking = () => {
     setBookingData(null);
 
     try {
-      const response = await ApiService.get(`/api/public/bookings/find/${bookingId.trim()}`);
+      // COMMENTED OUT (API CALL)
+      // const response = await ApiService.get(`/api/public/bookings/find/${bookingId.trim()}`);
+      
+      // Mock response data
+      const response = {
+        success: true,
+        data: {
+          bookingId: searchId.trim(),
+          hotelName: 'Mock Grand Hotel',
+          roomType: 'Deluxe Suite',
+          checkInDate: '2025-09-15',
+          checkOutDate: '2025-09-18',
+          guestName: 'John Doe',
+          totalAmount: 599.00,
+          currency: 'USD',
+          status: 'confirmed'
+        }
+      };
       
       if (response.success && response.data) {
         setBookingData(response.data);

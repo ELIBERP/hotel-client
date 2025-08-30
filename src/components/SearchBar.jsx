@@ -54,10 +54,13 @@ const SearchBar = ({
     
     setIsLoading(true);
     try {
+      // COMMENTED OUT (API CALL)
       // Make GET request to /hotels endpoint with search query
-      const results = await ApiService.getHotels({
-        destination_id: searchId.trim()
-      });
+      // const results = await ApiService.getHotels({
+      //   destination_id: searchId.trim()
+      // });
+      console.log('Using static hotel results instead of API');
+      const results = { hotels: [{ id: 'mock-1', name: 'Mock Hotel 1' }, { id: 'mock-2', name: 'Mock Hotel 2' }] };
       console.log('Hotels search results:', results);
       
       // Call the parent component's onSearch function

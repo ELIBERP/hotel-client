@@ -2,38 +2,21 @@
 FROM node:18 as build
 WORKDIR /app
 
-# Pull environment variables from Render build args
+# 👇 pull from Render as build-arg and expose to the build env
 ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
-# Add Google Maps API key
-ARG VITE_GOOGLEMAP_API_KEY
-ENV VITE_GOOGLEMAP_API_KEY=$VITE_GOOGLEMAP_API_KEY
-
-# Copy package files first
 COPY package.json package-lock.json ./
-
-# Remove any platform-specific rollup binaries before installing
-RUN grep -v "@rollup/rollup-darwin-" package.json > package.json.tmp && mv package.json.tmp package.json || echo "No darwin dependencies found"
-
-# Install dependencies with forced platform compatibility
-ENV npm_config_force=true
-ENV npm_config_ignore_scripts=true
-RUN npm install --no-package-lock
-
-# Fix Rollup binary issues by ensuring the correct platform binary is available
-RUN npm install --no-save --force @rollup/rollup-linux-x64-gnu
-
-# Copy the rest of the application
+RUN npm ci
 COPY . .
 
-# Make sure we don't have any Darwin-specific dependencies
-RUN npm uninstall --no-save @rollup/rollup-darwin-arm64 @rollup/rollup-darwin-x64 || true
+# Fix Rollup binary issues
+RUN npm install -g @rollup/rollup-linux-x64-gnu
+RUN npm install @rollup/rollup-linux-x64-gnu
 
 # Build the app
 RUN npm run build
 
-# Use Nginx to serve the static files
 FROM nginx:alpine
 
 # Default for local/dev; Render will inject/override PORT at runtime

@@ -121,6 +121,7 @@ const BookingForm = () => {
   const handleCreateBooking = async () => {
     setIsSubmitting(true);
     try {
+      // COMMENTED OUT (API CALL)
       // Check if user is authenticated
       const token = ApiService.getAuthToken();
       const authCheck = isAuthenticated();
