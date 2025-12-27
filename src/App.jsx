@@ -16,6 +16,7 @@ import BookingForm from "./pages/BookingForm";
 import FindBooking from "./pages/FindBooking";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import BundleDealAI from"./pages/BundleDealAI";
 import { logEnvironmentInfo } from "./config/env";
 
 const App = () => {
@@ -43,6 +44,7 @@ const App = () => {
                 <Route path="/booking-success" element={<BookingSuccess />} />
                 <Route path="/booking-cancel" element={<BookingCancel />} />
                 <Route path="/find-booking" element={<FindBooking />} />
+                <Route path="/bundle-deal-ai" element={<BundleDealAI />} />
               </Routes>
             </main>
             <Footer />
